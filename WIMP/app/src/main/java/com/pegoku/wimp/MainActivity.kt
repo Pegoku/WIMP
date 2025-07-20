@@ -9,7 +9,11 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import android.view.Menu
 import android.view.MenuItem
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.pegoku.wimp.databinding.ActivityMainBinding
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,10 +33,12 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
 
         binding.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+            Snackbar.make(view, "Get couriers", Snackbar.LENGTH_LONG)
                 .setAction("Action", null)
                 .setAnchorView(R.id.fab).show()
+
         }
+
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -56,4 +62,6 @@ class MainActivity : AppCompatActivity() {
         return navController.navigateUp(appBarConfiguration)
                 || super.onSupportNavigateUp()
     }
+
+
 }

@@ -118,15 +118,12 @@ object RetrofitClient {
 class SecondFragment : Fragment() {
 
     private var _binding: FragmentSecondBinding? = null
-    private val apiKey = "apik_rIttgRPsPuLism9rSKgu1uwcphblOo"
-
     // This property is only valid between onCreateView and
     // onDestroyView.
     private var selectedCourierName: String? = null
     private val binding get() = _binding!!
     private var couriersList: List<Couriers>? = null
     private var filteredList: List<Couriers> = listOf()
-
 
 
     override fun onCreateView(
@@ -150,24 +147,16 @@ class SecondFragment : Fragment() {
         binding.buttonSecond.setOnClickListener {
             findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
         }
-        binding.button12.setOnClickListener {
+        binding.courierSearchEditText.setOnClickListener {
 
             showFilterableSpinner()
 
         }
 
-    }
+        courierSearchText = bindingcourierSearchEditText.text.toString()
 
-//    private fun updateSpinner() {
-//        val courierSpinner: Spinner = binding.courierSpinner
-//        val adapter = ArrayAdapter(
-//            requireContext(),
-//            android.R.layout.simple_spinner_item,
-//            couriersList?.map { it.courierName } ?: listOf("No couriers available")
-//        )
-//        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-//        courierSpinner.adapter = adapter
-//    }
+
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()
@@ -207,7 +196,7 @@ class SecondFragment : Fragment() {
                 "Selected Courier: ${selectedCourier.courierName}",
                 Snackbar.LENGTH_SHORT
             ).show()
-            binding.textView123.setText(selectedCourierName)
+            binding.courierSearchEditText.setText(selectedCourier.courierName)
             dialog.dismiss()
         }
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -230,8 +219,10 @@ class SecondFragment : Fragment() {
     }
 }
 
-class CourierAdapter(private var couriers: List<Couriers>,
-                     private val onItemClick: (Couriers)-> Unit) :
+class CourierAdapter(
+    private var couriers: List<Couriers>,
+    private val onItemClick: (Couriers) -> Unit
+) :
     RecyclerView.Adapter<CourierAdapter.CourierViewHolder>() {
 
 
@@ -245,7 +236,7 @@ class CourierAdapter(private var couriers: List<Couriers>,
     }
 
     override fun onBindViewHolder(holder: CourierViewHolder, position: Int) {
-        var courier = couriers[position]
+        val courier = couriers[position]
         holder.textView.text = courier.courierName
         holder.itemView.setOnClickListener {
             onItemClick(courier)

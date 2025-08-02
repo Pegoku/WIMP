@@ -1,5 +1,6 @@
 package com.pegoku.wimp
 
+import android.annotation.SuppressLint
 import android.app.Dialog
 import android.os.Bundle
 import android.text.Editable
@@ -27,15 +28,17 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 import okhttp3.OkHttpClient
-import android.widget.Button // Import Button
+import android.widget.Button
 import android.widget.EditText
 import android.widget.Spinner
-import android.widget.TextView // Import TextView
+import android.widget.TextView
+import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.logging.HttpLoggingInterceptor
@@ -44,7 +47,7 @@ import kotlin.text.get
 
 val dotenv = dotenv {
     directory = "/assets"
-    filename = "env" // instead of '.env', use 'env'
+    filename = "env"
 }
 
 
@@ -88,12 +91,12 @@ interface Ship24ApiService {
 }
 
 object RetrofitClient {
-    // Initialize Retrofit client here
+    //Retrofit client
     private val BASE_URL: String by lazy { dotenv["BASE_URL"] ?: "" }
 
-    // Optional: For logging network requests and responses
+    // logging of network requests and responses
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY // Level.BASIC, Level.HEADERS
+        level = HttpLoggingInterceptor.Level.BODY // BASIC, HEADERS
     }
     private val client = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
@@ -118,12 +121,17 @@ object RetrofitClient {
 class SecondFragment : Fragment() {
 
     private var _binding: FragmentSecondBinding? = null
-    // This property is only valid between onCreateView and
-    // onDestroyView.
-    private var selectedCourierName: String? = null
+
+    public var selectedCourierName: String ? = null
+    private var selectedCourierCode: String ? = null
     private val binding get() = _binding!!
     private var couriersList: List<Couriers>? = null
     private var filteredList: List<Couriers> = listOf()
+    private lateinit var courierSearchText: TextInputEditText
+    private lateinit var searchResultsRecyclerView: RecyclerView
+    private lateinit var courierSearchEditText: EditText
+    private lateinit var database: TrackingDatabase
+    private lateinit var trackingsDao: TrackingsDao
 
 
     override fun onCreateView(
@@ -139,21 +147,66 @@ class SecondFragment : Fragment() {
     }
 
 
+    @SuppressLint("CutPasteId")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        database = TrackingDatabase.getDatabase(requireContext())
+        trackingsDao = database.trackingsDao()
+
         lifecycleScope.launch {
             couriersList = fetchCouriers()
         }
         binding.buttonSecond.setOnClickListener {
             findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
         }
-        binding.courierSearchEditText.setOnClickListener {
 
-            showFilterableSpinner()
+        binding.addShipmentButton.setOnClickListener {
+            saveTracking()
+        }
+
+        courierSearchEditText = view.findViewById(R.id.courierSearchEditText)
+        searchResultsRecyclerView = view.findViewById(R.id.searchResultsRecyclerView)
+
+        val searchAdapter = CourierAdapter(filteredList) { selectedCourier ->
+            binding.courierSearchEditText.setText(selectedCourier.courierName)
+            searchResultsRecyclerView.visibility = View.GONE
+            selectedCourierName = selectedCourier.courierName
+            selectedCourierCode = selectedCourier.courierCode
+            courierSearchEditText.clearFocus()
+            println("Selected courier: ${selectedCourier.courierName}")
 
         }
 
-        courierSearchText = bindingcourierSearchEditText.text.toString()
+        searchResultsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
+        searchResultsRecyclerView.adapter = searchAdapter
+
+        courierSearchEditText.setOnFocusChangeListener { _, hasFocus ->
+//            searchResultsRecyclerView.visibility = if (hasFocus) View.VISIBLE else View.GONE
+            println("Search EditText focus changed: $hasFocus")
+        }
+
+        courierSearchEditText.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+
+                val query = s.toString().lowercase()
+                println("Text changed: ${query}")
+                filteredList =
+                    couriersList?.filter { it.courierName.lowercase().contains(query) } ?: listOf()
+                println(filteredList)
+                // Update adapter with filtered list
+                searchAdapter.updateList(filteredList)
+
+                // Toggle RecyclerView visibility based on results
+                searchResultsRecyclerView.visibility =
+                    if (filteredList.isNotEmpty()) View.VISIBLE else View.GONE
+
+            }
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+        })
 
 
     }
@@ -180,54 +233,82 @@ class SecondFragment : Fragment() {
         }
     }
 
-    private fun showFilterableSpinner() {
-        val dialog = Dialog(requireContext())
-        dialog.setContentView(R.layout.dialog_spinner)
 
-        val recyclerView = dialog.findViewById<RecyclerView>(R.id.recyclerView)
-        val editText = dialog.findViewById<EditText>(R.id.editTextFilter)
+    private fun saveTracking() {
+        val trackinNumbeer = binding.trackingNumberText.text.toString().trim()
+        val courierName = selectedCourierName ?: ""
+        val title = binding.titleTextField.text.toString().trim() ?: trackinNumbeer
 
-        filteredList = couriersList?.take(10) ?: listOf() // Initially show the first 10 results
-        val adapter = CourierAdapter(filteredList) { selectedCourier ->
-            // Handle courier selection
-            selectedCourierName = selectedCourier.courierName
-            Snackbar.make(
-                requireView(),
-                "Selected Courier: ${selectedCourier.courierName}",
-                Snackbar.LENGTH_SHORT
-            ).show()
-            binding.courierSearchEditText.setText(selectedCourier.courierName)
-            dialog.dismiss()
-        }
-        recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        recyclerView.adapter = adapter
+        println("Tracking Number: $trackinNumbeer")
+        println("Courier Name: $courierName")
+//        println("Courier Code: $courierCode")
+        println("Title: $title")
 
-        editText.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) {
-                val query = s.toString().lowercase()
-                filteredList =
-                    couriersList?.filter { it.courierName.lowercase().contains(query) }?.take(10)
-                        ?: listOf()
-                adapter.updateList(filteredList)
+        if (trackinNumbeer.isNotEmpty() && courierName.isNotEmpty()) {
+            val tracking = Tracking(
+                trackingNumber = trackinNumbeer,
+                courierName = courierName,
+                courierCode = getCourierCodeByName(courierName),
+                title = title,
+                addedDate = System.currentTimeMillis()
+            )
+
+            lifecycleScope.launch {
+                try {
+                    trackingsDao.insertTracking(tracking)
+                    Snackbar.make(
+                        binding.root,
+                        "Tracking saved successfully",
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                    clearFields()
+                } catch (e: Exception) {
+                    Snackbar.make(
+                        binding.root,
+                        "Error saving tracking: ${e.message}",
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                }
             }
-
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        })
-
-        dialog.show()
+        } else {
+            Snackbar.make(binding.root, "Please fill in all the fields", Snackbar.LENGTH_SHORT)
+                .show()
+        }
     }
+
+    private fun getCourierCodeByName(courierName: String): String {
+        return couriersList?.find {it.courierName == courierName }?.courierCode ?: ""
+    }
+
+    private fun clearFields() {
+        binding.trackingNumberText.setText("")
+        binding.courierSearchEditText.setText("")
+        binding.titleTextField.setText("")
+        selectedCourierName = null
+        selectedCourierCode = null
+        findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
+    }
+
 }
 
 class CourierAdapter(
     private var couriers: List<Couriers>,
     private val onItemClick: (Couriers) -> Unit
+
 ) :
     RecyclerView.Adapter<CourierAdapter.CourierViewHolder>() {
 
 
     inner class CourierViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val textView: TextView = view.findViewById(R.id.textViewCourier)
+        init{
+            view.setOnClickListener {
+                val position = adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    onItemClick(couriers[position])
+                }
+            }
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CourierViewHolder {
@@ -237,6 +318,7 @@ class CourierAdapter(
 
     override fun onBindViewHolder(holder: CourierViewHolder, position: Int) {
         val courier = couriers[position]
+//        SecondFragment.selectedCourierName = courier.courierName
         holder.textView.text = courier.courierName
         holder.itemView.setOnClickListener {
             onItemClick(courier)

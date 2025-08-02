@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("kotlin-kapt")
 }
 
 android {
@@ -56,5 +57,7 @@ dependencies {
     implementation(libs.logging.interceptor)
     implementation(libs.androidx.recyclerview)
     implementation(libs.dotenv.kotlin)
-//    implementation(libs.androidx.material3)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
 }

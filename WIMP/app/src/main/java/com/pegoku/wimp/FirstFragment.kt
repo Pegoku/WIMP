@@ -5,8 +5,19 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.snackbar.Snackbar
 import com.pegoku.wimp.databinding.FragmentFirstBinding
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+import com.google.android.material.card.MaterialCardView
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+
 
 /**
  * A simple [Fragment] subclass as the default destination in the navigation.
@@ -15,8 +26,12 @@ class FirstFragment : Fragment() {
 
     private var _binding: FragmentFirstBinding? = null
 
-    // This property is only valid between onCreateView and
-    // onDestroyView.
+    private lateinit var database: TrackingDatabase
+    private lateinit var trackingsDao: TrackingsDao
+
+    private lateinit var trackingAdapter: TrackingAdapter
+
+
     private val binding get() = _binding!!
 
     override fun onCreateView(
@@ -32,13 +47,105 @@ class FirstFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        database = TrackingDatabase.getDatabase(requireContext())
+        trackingsDao = database.trackingsDao()
+
+        setupRecyclerView()
+        loadTrackings()
+
         binding.buttonFirst.setOnClickListener {
             findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
         }
+
+
+    }
+
+    private fun setupRecyclerView() {
+        trackingAdapter = TrackingAdapter(emptyList()) { tracking ->
+//            Snackbar.make(binding.root, "Clicked on: ${tracking.title ?: tracking.trackingNumber}", Snackbar.LENGTH_SHORT).show()
+        }
+
+        binding.trackingListRecyclerview.layoutManager = LinearLayoutManager(requireContext())
+        binding.trackingListRecyclerview.adapter = trackingAdapter
+//        binding.trackingListRecyclerview.apply {
+//            layoutManager = LinearLayoutManager(requireContext())
+//            adapter = trackingAdapter
+//        }
+    }
+
+    private fun loadTrackings() {
+        lifecycleScope.launch {
+            try {
+                val trackings = trackingsDao.getAllTrackings()
+                if (trackings.isEmpty()) {
+                    binding.emptyListText.visibility = View.VISIBLE
+                    binding.trackingListRecyclerview.visibility = View.GONE
+                } else {
+                    binding.emptyListText.visibility = View.GONE
+                    binding.trackingListRecyclerview.visibility = View.VISIBLE
+                    trackingAdapter.updateList(trackings)
+                }
+            } catch (e: Exception) {
+                Snackbar.make(binding.root, "Error loading trackings: ${e.message}", Snackbar.LENGTH_LONG).show()
+
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadTrackings() // Refresh the list when the fragment is resumed
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+}
+
+class TrackingAdapter(
+    private var trackings: List<Tracking>,
+    private val onItemClick: (Tracking) -> Unit
+) : RecyclerView.Adapter<TrackingAdapter.TrackingViewHolder>() {
+
+    inner class TrackingViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val titleText: TextView = view.findViewById(R.id.titleText)
+        val trackingNumberText: TextView = view.findViewById(R.id.trackingNumberText)
+        val courierNameText: TextView = view.findViewById(R.id.courierNameText)
+        val dateText: TextView = view.findViewById(R.id.dateText)
+        val statusText: TextView = view.findViewById(R.id.statusText)
+        val cardView: MaterialCardView = view.findViewById(R.id.trackingCard)
+
+        init {
+            view.setOnClickListener {
+                val position = adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    onItemClick(trackings[position])
+                }
+            }
+        }
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TrackingViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_tracking, parent, false)
+        return TrackingViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: TrackingViewHolder, position: Int) {
+        val tracking = trackings[position]
+        holder.titleText.text = tracking.title ?: tracking.trackingNumber
+        holder.trackingNumberText.text = tracking.trackingNumber
+        holder.courierNameText.text = tracking.courierName
+        holder.dateText.text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+            .format(Date(tracking.addedDate))
+        holder.statusText.text = "In Transit" // Default status, placeholder
+    }
+
+    override fun getItemCount(): Int = trackings.size
+
+    fun updateList(newList: List<Tracking>) {
+        trackings = newList
+        notifyDataSetChanged()
     }
 }

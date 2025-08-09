@@ -119,7 +119,7 @@ class FirstFragment : Fragment() {
             try {
                 val trackings = trackingsDao.getAllTrackings()
                 for (tracking in trackings) {
-                    if (tracking.lastUpdated == null || (tracking.lastUpdated < System.currentTimeMillis() - 1 * 60 * 1000L)) {
+                    if (tracking.lastUpdated == null || (tracking.lastUpdated < System.currentTimeMillis() - 5 * 60 * 1000L)) {
                         val response = RetrofitClient.instance.track(
                             trackingNumber = tracking.trackingNumber,
                             apiKey = "Bearer ${dotenv["API_KEY"]}",

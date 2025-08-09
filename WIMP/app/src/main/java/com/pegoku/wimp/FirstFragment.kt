@@ -5,7 +5,6 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -17,6 +16,7 @@ import java.util.*
 import com.google.android.material.card.MaterialCardView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import java.util.Objects.toString
 
 class FirstFragment : Fragment() {
 
@@ -48,7 +48,7 @@ class FirstFragment : Fragment() {
 
         setupRecyclerView()
         loadTrackings()
-        updateTrackingsStatus()
+        updateTrackings()
         binding.buttonFirst.setOnClickListener {
             findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
         }
@@ -100,11 +100,14 @@ class FirstFragment : Fragment() {
         }
     }
 
-    private fun updateTrackingsStatus() {
+    private fun updateTrackings() {
         lifecycleScope.launch {
             try {
                 val trackings = trackingsDao.getAllTrackings()
                 for (tracking in trackings) {
+                    if ((tracking.lastUpdated != null && tracking.lastUpdated > System.currentTimeMillis() - 1 * 60 * 1000L) || tracking.lastUpdated == null || tracking.lastUpdated == 0L) {
+                        continue
+                    }
                     val response = RetrofitClient.instance.track(
                         trackingNumber = tracking.trackingNumber,
                         apiKey = "Bearer ${dotenv["API_KEY"]}",
@@ -112,8 +115,10 @@ class FirstFragment : Fragment() {
                     if (response.isSuccessful) {
                         val status = response.body()
                         println("Status for ${tracking.trackingNumber}: ${status?.data?.trackings?.firstOrNull()?.shipment?.statusMilestone ?: "Unknown"}")
-                        trackingsDao.updateStatusByTrackingNumber(
+                        trackingsDao.updateStatusAndEventsByTrackingNumber(
                             tracking.trackingNumber,
+                            toString(status?.data?.trackings?.firstOrNull()?.events)
+                                ?: "No events found",
                             status?.data?.trackings?.firstOrNull()?.shipment?.statusMilestone
                                 ?: "Unknown"
                         )

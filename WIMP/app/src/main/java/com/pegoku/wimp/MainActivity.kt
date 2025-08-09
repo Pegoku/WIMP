@@ -50,7 +50,7 @@ data class Tracking(
     @ColumnInfo(name = "events")
     val events: String? = null,
     @ColumnInfo(name = "last_updated")
-    val lastUpdated: Long? = null
+    val lastUpdated: Long? = 0
 )
 
 @Dao
@@ -85,16 +85,23 @@ interface TrackingsDao {
     @Query("UPDATE trackings SET events = :newEvents WHERE tracking_number = :trackingNumber")
     suspend fun updateEventsByTrackingNumber(trackingNumber: String, newEvents: String)
 
-    @Query("UPDATE trackings SET events = :newEvent AND status = :status WHERE tracking_number = :trackingNumber")
-    suspend fun updateStatusAndEventsByTrackingNumber(trackingNumber: String, newEvent: String, status: String)
+    @Query("UPDATE trackings SET events = :newEvent, status = :status, last_updated = :lastUpdated WHERE tracking_number = :trackingNumber")
+    suspend fun updateStatusAndEventsByTrackingNumber(
+        trackingNumber: String,
+        newEvent: String,
+        status: String,
+        lastUpdated: Long = System.currentTimeMillis()
+    )
 
+    @Query("DELETE FROM trackings WHERE tracking_number = :trackingNumber")
+    suspend fun deleteTrackingByTrackingNumber(trackingNumber: String)
 }
 
 @Database(
     entities = [Tracking::class],
-    version = 3,
+    version = 4,
     autoMigrations = [
-        AutoMigration(from = 2, to = 3)
+        AutoMigration(from = 3, to = 4)
     ]
 )
 abstract class TrackingDatabase : RoomDatabase() {

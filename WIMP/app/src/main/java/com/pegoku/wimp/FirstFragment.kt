@@ -105,29 +105,35 @@ class FirstFragment : Fragment() {
             try {
                 val trackings = trackingsDao.getAllTrackings()
                 for (tracking in trackings) {
-                    if ((tracking.lastUpdated != null && tracking.lastUpdated > System.currentTimeMillis() - 1 * 60 * 1000L) || tracking.lastUpdated == null || tracking.lastUpdated == 0L) {
-                        continue
+                    if (tracking.lastUpdated == null || (tracking.lastUpdated > System.currentTimeMillis() - 1 * 60 * 1000L)) {
+                        val response = RetrofitClient.instance.track(
+                            trackingNumber = tracking.trackingNumber,
+                            apiKey = "Bearer ${dotenv["API_KEY"]}",
+                        )
+                        if (response.isSuccessful) {
+                            val status = response.body()
+                            println("Status for ${tracking.trackingNumber}: ${status?.data?.trackings?.firstOrNull()?.shipment?.statusMilestone ?: "Unknown"}  ${System.currentTimeMillis()}")
+                            trackingsDao.updateStatusAndEventsByTrackingNumber(
+                                tracking.trackingNumber,
+                                status?.data?.trackings?.firstOrNull()?.events?.toString()
+                                    ?: "No events found",
+                                status?.data?.trackings?.firstOrNull()?.shipment?.statusMilestone
+                                    ?: "Unknown",
+                                System.currentTimeMillis()
+                            )
+                            println(toString(status?.data?.trackings?.firstOrNull()?.events)
+                                ?: "No events found")
+                        } else
+                            if (response.errorBody()?.string()?.contains("tracker_not_found") == true) {
+                                println("Tracking number ${tracking.trackingNumber} not found, removing from database.")
+                                trackingsDao.deleteTrackingByTrackingNumber(tracking.trackingNumber)
+                            } else
+                            println(
+                                "Failed to update status for ${tracking.trackingNumber}: ${
+                                    response.errorBody()?.string() ?: "Unknown error"
+                                }"
+                            )
                     }
-                    val response = RetrofitClient.instance.track(
-                        trackingNumber = tracking.trackingNumber,
-                        apiKey = "Bearer ${dotenv["API_KEY"]}",
-                    )
-                    if (response.isSuccessful) {
-                        val status = response.body()
-                        println("Status for ${tracking.trackingNumber}: ${status?.data?.trackings?.firstOrNull()?.shipment?.statusMilestone ?: "Unknown"}")
-                        trackingsDao.updateStatusAndEventsByTrackingNumber(
-                            tracking.trackingNumber,
-                            toString(status?.data?.trackings?.firstOrNull()?.events)
-                                ?: "No events found",
-                            status?.data?.trackings?.firstOrNull()?.shipment?.statusMilestone
-                                ?: "Unknown"
-                        )
-                    } else
-                        println(
-                            "Failed to update status for ${tracking.trackingNumber}: ${
-                                response.errorBody()?.string() ?: "Unknown error"
-                            }"
-                        )
                 }
                 loadTrackings() // Refresh the list after updating statuses
             } catch (e: Exception) {

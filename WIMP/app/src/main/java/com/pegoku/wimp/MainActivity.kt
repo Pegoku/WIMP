@@ -13,6 +13,7 @@ import android.view.MenuItem
 import androidx.collection.mutableIntIntMapOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.AutoMigration
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.ColumnInfo
@@ -43,7 +44,11 @@ data class Tracking(
     @ColumnInfo(name = "title")
     val title: String? = null,
     @ColumnInfo(name = "added_date", defaultValue = "CURRENT_TIMESTAMP")
-    val addedDate: Long
+    val addedDate: Long,
+    @ColumnInfo(name = "status")
+    val status: String? = "Unknown",
+    @ColumnInfo(name = "events")
+    val events: String? = null
 )
 
 @Dao
@@ -66,12 +71,26 @@ interface TrackingsDao {
     @Query("DELETE FROM trackings WHERE uid = :uid")
     suspend fun deleteTrackingById(uid: Int)
 
+    @Update(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun updateTracking(tracking: Tracking)
+
+    @Query("SELECT status FROM trackings WHERE tracking_number = :trackingNumber")
+    suspend fun getStatusByTrackingNumber(trackingNumber: String): String?
+
+    @Query("UPDATE trackings SET status = :status WHERE tracking_number = :trackingNumber")
+    suspend fun updateStatusByTrackingNumber(trackingNumber: String, status: String)
+
+    @Query("UPDATE trackings SET events = :newEvents WHERE tracking_number = :trackingNumber")
+    suspend fun updateEventsByTrackingNumber(trackingNumber: String, newEvents: String)
+
 }
 
 @Database(
     entities = [Tracking::class],
-    version = 1,
-    exportSchema = false
+    version = 2,
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2)
+    ]
 )
 abstract class TrackingDatabase : RoomDatabase() {
     abstract fun trackingsDao(): TrackingsDao

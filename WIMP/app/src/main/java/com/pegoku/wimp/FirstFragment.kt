@@ -18,10 +18,6 @@ import com.google.android.material.card.MaterialCardView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-
-/**
- * A simple [Fragment] subclass as the default destination in the navigation.
- */
 class FirstFragment : Fragment() {
 
     private var _binding: FragmentFirstBinding? = null
@@ -43,6 +39,7 @@ class FirstFragment : Fragment() {
         return binding.root
 
     }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -51,7 +48,7 @@ class FirstFragment : Fragment() {
 
         setupRecyclerView()
         loadTrackings()
-
+        updateTrackingsStatus()
         binding.buttonFirst.setOnClickListener {
             findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
         }
@@ -61,7 +58,11 @@ class FirstFragment : Fragment() {
 
     private fun setupRecyclerView() {
         trackingAdapter = TrackingAdapter(emptyList()) { tracking ->
-            Snackbar.make(binding.root, "Selected: ${tracking.trackingNumber}", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(
+                binding.root,
+                "Selected: ${tracking.trackingNumber}",
+                Snackbar.LENGTH_SHORT
+            ).show()
             findNavController().navigate(R.id.action_FirstFragment_to_ShipmentInfo, Bundle().apply {
                 putString("trackingCode", tracking.trackingNumber)
             })
@@ -74,6 +75,7 @@ class FirstFragment : Fragment() {
 //            adapter = trackingAdapter
 //        }
     }
+
     private fun loadTrackings() {
         lifecycleScope.launch {
             try {
@@ -87,10 +89,52 @@ class FirstFragment : Fragment() {
                     trackingAdapter.updateList(trackings)
                 }
             } catch (e: Exception) {
-                Snackbar.make(binding.root, "Error loading trackings: ${e.message}", Snackbar.LENGTH_LONG).show()
+                Snackbar.make(
+                    binding.root,
+                    "Error loading trackings: ${e.message}",
+                    Snackbar.LENGTH_LONG
+                ).show()
+                println("Error loading trackings: ${e.message}")
 
             }
         }
+    }
+
+    private fun updateTrackingsStatus() {
+        lifecycleScope.launch {
+            try {
+                val trackings = trackingsDao.getAllTrackings()
+                for (tracking in trackings) {
+                    val response = RetrofitClient.instance.track(
+                        trackingNumber = tracking.trackingNumber,
+                        apiKey = "Bearer ${dotenv["API_KEY"]}",
+                    )
+                    if (response.isSuccessful) {
+                        val status = response.body()
+                        println("Status for ${tracking.trackingNumber}: ${status?.data?.trackings?.firstOrNull()?.shipment?.statusMilestone ?: "Unknown"}")
+                        trackingsDao.updateStatusByTrackingNumber(
+                            tracking.trackingNumber,
+                            status?.data?.trackings?.firstOrNull()?.shipment?.statusMilestone
+                                ?: "Unknown"
+                        )
+                    } else
+                        println(
+                            "Failed to update status for ${tracking.trackingNumber}: ${
+                                response.errorBody()?.string() ?: "Unknown error"
+                            }"
+                        )
+                }
+                loadTrackings() // Refresh the list after updating statuses
+            } catch (e: Exception) {
+                Snackbar.make(
+                    binding.root,
+                    "Error updating trackings: ${e.message}",
+                    Snackbar.LENGTH_LONG
+                ).show()
+                println("Error updating trackings: ${e.message}")
+            }
+        }
+
     }
 
     override fun onResume() {
@@ -103,6 +147,12 @@ class FirstFragment : Fragment() {
         _binding = null
     }
 
+//    suspend fun updateTracking(trackingNumber: String){
+//        try {
+//            val response: RetrofitClient.instance.track()
+//        }
+//
+//    }
 }
 
 class TrackingAdapter(
@@ -132,7 +182,8 @@ class TrackingAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TrackingViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_tracking, parent, false)
+        val view =
+            LayoutInflater.from(parent.context).inflate(R.layout.item_tracking, parent, false)
         return TrackingViewHolder(view)
     }
 
@@ -143,7 +194,7 @@ class TrackingAdapter(
         holder.courierNameText.text = tracking.courierName
         holder.dateText.text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
             .format(Date(tracking.addedDate))
-        holder.statusText.text = "In Transit" // Default status, placeholder
+        holder.statusText.text = tracking.status
     }
 
     override fun getItemCount(): Int = trackings.size

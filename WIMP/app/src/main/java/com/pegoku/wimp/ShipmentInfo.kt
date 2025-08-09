@@ -59,17 +59,20 @@ class ShipmentInfo : Fragment() {
             println("Loading events for tracking code: $trackingCode")
             shipmentEventAdapter = ShipmentEventAdapter(emptyList())
             binding.eventListRecyclerview.adapter = shipmentEventAdapter
+            binding.eventListRecyclerview.visibility = View.GONE
+            binding.shipmentInfoNoAvailableText.visibility = View.GONE
             if (_binding != null) {
                 try {
                     val eventsStr = trackingsDao.getEventsByTrackingNumber(trackingCode)
                     print("Events String: $eventsStr")
                     if (eventsStr.isNullOrEmpty() || eventsStr == "[]") {
-                        Snackbar.make(
-                            binding.root,
-                            "No events found for tracking number: $trackingCode",
-                            Snackbar.LENGTH_LONG
-                        ).show()
+//                        Snackbar.make(
+//                            binding.root,
+//                            "No events found for tracking number: $trackingCode",
+//                            Snackbar.LENGTH_LONG
+//                        ).show()
                         println("No events found for tracking number: $trackingCode")
+                        binding.shipmentInfoNoAvailableText.visibility = View.VISIBLE
                     } else {
                         val eventList = getJsonEventsList(eventsStr)
                         shipmentEventAdapter.updateList(eventList)

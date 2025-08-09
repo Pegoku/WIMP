@@ -14,15 +14,32 @@
         <action
             android:id="@+id/action_FirstFragment_to_SecondFragment"
             app:destination="@id/SecondFragment" />
+        <action
+            android:id="@+id/action_FirstFragment_to_ShipmentInfo"
+            app:destination="@id/ShipmentInfo" />
     </fragment>
     <fragment
         android:id="@+id/SecondFragment"
         android:name="com.pegoku.wimp.SecondFragment"
         android:label="@string/second_fragment_label"
-        tools:layout="@layout/fragment_second">
-
+        tools:layout="@layout/fragment_second">>
         <action
             android:id="@+id/action_SecondFragment_to_FirstFragment"
             app:destination="@id/FirstFragment" />
+    </fragment>
+
+
+    <fragment
+        android:id="@+id/ShipmentInfo"
+        android:name="com.pegoku.wimp.ShipmentInfo"
+        android:label="Shipment info"
+        tools:layout="@layout/shipment_info">
+
+        <action
+            android:id="@+id/action_ShipmentInfo_to_FirstFragment"
+            app:destination="@id/FirstFragment" />
+
+
+
     </fragment>
 </navigation>

@@ -6,6 +6,8 @@ API_URL = "https://api.ship24.com/public/v1/"
 
 load_dotenv()
 
+tracking_number = "077010000029154662"
+
 API_KEY = os.getenv("API_KEY")
 
 couriers = [(1,2,3,1,2,3),(),()]
@@ -31,15 +33,18 @@ def create_tracker(tracking_number, courier_code=None, post_code=None):
     response = requests.post(url, json=payload, headers=headers)
     return response.json()
 
+def get_tracker_by_trackingNumber(tracking_number):
+    url = f"{API_URL}trackers/search/{tracking_number}/results"
+    response = requests.get(url, headers=headers)
+    return response.json()
 
 def main():
     print(f"API_KEY = {API_KEY}")
     couriers = get_couriers()
-    print(f"Available couriers: {couriers}")
+    # print(f"Available couriers: {couriers}")
     # tracking_number = "077010000029798418"
-    # print(f"Tracking number: {create_tracker(tracking_number)}")
-    
-    
+    print(f"Tracking number: {create_tracker("2025300788730135820601", "seur-es")}")
+    print(f"Tracking status: {get_tracker_by_trackingNumber("2025300788730135820601")}")
 
 if __name__ == "__main__":
     main()

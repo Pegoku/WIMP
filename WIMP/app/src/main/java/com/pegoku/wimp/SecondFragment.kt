@@ -1,7 +1,6 @@
 package com.pegoku.wimp
 
 import android.annotation.SuppressLint
-import android.app.Dialog
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -9,47 +8,38 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupActionBarWithNavController
 import com.google.android.material.snackbar.Snackbar
-import com.pegoku.wimp.databinding.ActivityMainBinding
 import com.pegoku.wimp.databinding.FragmentSecondBinding
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.Response
-import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
-import retrofit2.http.POST
-import retrofit2.http.Path
-import retrofit2.http.Query
 import okhttp3.OkHttpClient
-import android.widget.Button
 import android.widget.EditText
-import android.widget.Spinner
 import android.widget.TextView
-import androidx.core.view.updateLayoutParams
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.textfield.TextInputEditText
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.logging.HttpLoggingInterceptor
 import io.github.cdimascio.dotenv.dotenv
-import kotlin.text.get
+import retrofit2.http.Body
+import retrofit2.http.POST
 
 val dotenv = dotenv {
     directory = "/assets"
     filename = "env"
 }
 
+data class TrackerCreateBody(
+    val trackingNumber: String,
+    val courierCode: String,
+    val destinationPostCode: String? = null
+)
 
 data class TrackingRequestBody(
     val trackingNumber: String,
@@ -57,12 +47,120 @@ data class TrackingRequestBody(
     val destinationPostCode: String? = null
 )
 
+data class TrackerCreateResponse(
+    val data: TrackerCreateDataData
+)
+
+data class TrackerCreateDataData(
+    val tracker: TrackerCreateTrackerData
+)
+
+data class TrackerCreateTrackerData(
+    val trackerId: String,
+    val trackingNumber: String,
+    val shipmentReference: String? = null,
+    val courierCode: List<String>,
+    val clientTrackerId: String? = null,
+    val isSubscribed: Boolean,
+    val isTracked: Boolean,
+    val createdAt: String
+)
+
 data class CouriersResponse(
     val data: CouriersData
 )
 
+data class TrackingResponse(
+    val data: TrackingData
+)
+
 data class CouriersData(
     val couriers: List<Couriers>
+)
+
+data class TrackingData(
+    val trackings: List<TrackingDataInner>
+)
+
+data class TrackingDataInner(
+    val tracker: TrackerData,
+    val shipment: ShipmentData,
+    val events: List<TrackingEvent>,
+    val statistics: StatisticsData
+)
+
+data class TrackerData(
+    val trackerId: String,
+    val trackingNumber: String,
+    val shipmentReference: String? = null,
+    val courierCode: List<String>,
+    val clientTrackerId: String? = null,
+    val isSubscribed: Boolean,
+    val isTracked: Boolean,
+    val createdAt: String
+)
+
+data class ShipmentData(
+    val shipmentId: String,
+    val statusCode: String,
+    val statusCategory: String,
+    val statusMilestone: String,
+    val originCountryCode: String? = null,
+    val destinationCountryCode: String? = null,
+    val delivery: DeliveryData,
+    val trackingNumbers: List<TrackingNumbersData>,
+    val recipient: RecipientData
+)
+
+data class TrackingNumbersData(
+    val tn: String
+)
+
+data class DeliveryData(
+    val estimatedDeliveryDate: String? = null,
+    val service: String? = null,
+    val signedBy: String? = null
+)
+
+data class RecipientData(
+    val name: String? = null,
+    val address: String? = null,
+    val postCode: String? = null,
+    val city: String? = null,
+    val subdivision: String? = null
+)
+
+data class TrackingEvent(
+    val eventId: String,
+    val trackingNumber: String,
+    val eventTrackingNumber: String,
+    val status: String,
+    val occurrenceDatetime: String,
+    val order: String? = null,
+    val datetime: String,
+    val hasNoTime: Boolean,
+    val utcOffset: String? = null,
+    val location: String? = null,
+    val sourceCode: String? = null,
+    val courierCode: String? = null,
+    val statusCode: String? = null,
+    val statusCategory: String? = null,
+    val statusMilestone: String? = null,
+)
+
+
+data class StatisticsData(
+    val timestamps: TimestampsData
+)
+
+data class TimestampsData(
+    val infoReceivedDatetime: String? = null,
+    val inTransitDatetime: String? = null,
+    val outForDeliveryDatetime: String? = null,
+    val failedAttemptDatetime: String? = null,
+    val availableForPickupDatetime: String? = null,
+    val exceptionDatetime: String? = null,
+    val deliveredDatetime: String? = null,
 )
 
 data class Couriers(
@@ -76,11 +174,18 @@ data class Couriers(
 )
 
 interface Ship24ApiService {
-//    @POST("tracking/track")
-//    suspend fun track(
-//        @Header("Bearer") apiKey: String,
-//        @Body body: TrackingRequestBody
-//    ): Response<TrackingResponse>
+    @GET("trackers/search/{trackingNumber}/results")
+    suspend fun track(
+        @Header("Authorization") apiKey: String,
+        @Body body: TrackingRequestBody
+    ): Response<TrackingResponse>
+
+    @POST("trackers")
+    suspend fun createTracker(
+        @Header("Authorization") apiKey: String,
+        @Body body: TrackerCreateBody
+    ): Response<TrackerCreateResponse>
+
 
     @GET("couriers")
     suspend fun getCouriers(
@@ -122,8 +227,8 @@ class SecondFragment : Fragment() {
 
     private var _binding: FragmentSecondBinding? = null
 
-    public var selectedCourierName: String ? = null
-    private var selectedCourierCode: String ? = null
+    public var selectedCourierName: String? = null
+    private var selectedCourierCode: String? = null
     private val binding get() = _binding!!
     private var couriersList: List<Couriers>? = null
     private var filteredList: List<Couriers> = listOf()
@@ -163,6 +268,7 @@ class SecondFragment : Fragment() {
 
         binding.addShipmentButton.setOnClickListener {
             saveTracking()
+
         }
 
         courierSearchEditText = view.findViewById(R.id.courierSearchEditText)
@@ -233,20 +339,44 @@ class SecondFragment : Fragment() {
         }
     }
 
+    suspend fun createTracker(
+        trackingNumber: String,
+        courierCode: String,
+        destinationPostCode: String? = null
+    ): TrackerCreateResponse? {
+        return try {
+            val response = RetrofitClient.instance.createTracker(
+                apiKey = "Bearer ${dotenv["API_KEY"]}",
+                body = TrackerCreateBody(
+                    trackingNumber = trackingNumber,
+                    courierCode = courierCode,
+                    destinationPostCode = destinationPostCode
+                )
+            )
+            if (response.isSuccessful) {
+                response.body()
+            } else {
+                println("Error creating tracker: ${response.errorBody()?.string()}")
+                null
+            }
+        } catch (exception: Exception) {
+            println("Error creating tracker: ${exception.message}")
+        } as TrackerCreateResponse?
+    }
 
     private fun saveTracking() {
-        val trackinNumbeer = binding.trackingNumberText.text.toString().trim()
+        val trackingNumber = binding.trackingNumberText.text.toString().trim()
         val courierName = selectedCourierName ?: ""
-        val title = binding.titleTextField.text.toString().trim() ?: trackinNumbeer
+        val title = binding.titleTextField.text.toString().trim()
 
-        println("Tracking Number: $trackinNumbeer")
+        println("Tracking Number: $trackingNumber")
         println("Courier Name: $courierName")
 //        println("Courier Code: $courierCode")
         println("Title: $title")
 
-        if (trackinNumbeer.isNotEmpty() && courierName.isNotEmpty()) {
+        if (trackingNumber.isNotEmpty() && courierName.isNotEmpty()) {
             val tracking = Tracking(
-                trackingNumber = trackinNumbeer,
+                trackingNumber = trackingNumber,
                 courierName = courierName,
                 courierCode = getCourierCodeByName(courierName),
                 title = title,
@@ -255,12 +385,37 @@ class SecondFragment : Fragment() {
 
             lifecycleScope.launch {
                 try {
-                    trackingsDao.insertTracking(tracking)
+
                     Snackbar.make(
                         binding.root,
                         "Tracking saved successfully",
                         Snackbar.LENGTH_SHORT
                     ).show()
+
+                    // create tracker for Ship24
+                    createTracker(tracking.trackingNumber, tracking.courierCode)
+                        .let { response ->
+                            if (response != null) {
+                                println("Tracker created successfully: $response")
+                                if (!response.data.tracker.isTracked) {
+                                    trackingsDao.insertTracking(tracking)
+                                } else {
+                                    Snackbar.make(
+                                        binding.root,
+                                        "Tracker already exists for this tracking number",
+                                        Snackbar.LENGTH_SHORT
+                                    ).show()
+                                    println("Tracker already exists for this tracking number")
+                                }
+                            } else {
+                                Snackbar.make(
+                                    binding.root,
+                                    "Failed to create tracker",
+                                    Snackbar.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+
                     clearFields()
                 } catch (e: Exception) {
                     Snackbar.make(
@@ -268,6 +423,7 @@ class SecondFragment : Fragment() {
                         "Error saving tracking: ${e.message}",
                         Snackbar.LENGTH_SHORT
                     ).show()
+                    println("Error saving tracking: ${e.message}")
                 }
             }
         } else {
@@ -277,7 +433,7 @@ class SecondFragment : Fragment() {
     }
 
     private fun getCourierCodeByName(courierName: String): String {
-        return couriersList?.find {it.courierName == courierName }?.courierCode ?: ""
+        return couriersList?.find { it.courierName == courierName }?.courierCode ?: ""
     }
 
     private fun clearFields() {
@@ -301,11 +457,13 @@ class CourierAdapter(
 
     inner class CourierViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val textView: TextView = view.findViewById(R.id.textViewCourier)
-        init{
+
+        init {
             view.setOnClickListener {
                 val position = adapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onItemClick(couriers[position])
+
                 }
             }
         }

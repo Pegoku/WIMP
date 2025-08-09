@@ -43,7 +43,6 @@ class FirstFragment : Fragment() {
         return binding.root
 
     }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -62,7 +61,10 @@ class FirstFragment : Fragment() {
 
     private fun setupRecyclerView() {
         trackingAdapter = TrackingAdapter(emptyList()) { tracking ->
-//            Snackbar.make(binding.root, "Clicked on: ${tracking.title ?: tracking.trackingNumber}", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, "Selected: ${tracking.trackingNumber}", Snackbar.LENGTH_SHORT).show()
+            findNavController().navigate(R.id.action_FirstFragment_to_ShipmentInfo, Bundle().apply {
+                putString("trackingCode", tracking.trackingNumber)
+            })
         }
 
         binding.trackingListRecyclerview.layoutManager = LinearLayoutManager(requireContext())
@@ -72,7 +74,6 @@ class FirstFragment : Fragment() {
 //            adapter = trackingAdapter
 //        }
     }
-
     private fun loadTrackings() {
         lifecycleScope.launch {
             try {
@@ -122,6 +123,9 @@ class TrackingAdapter(
                 val position = adapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onItemClick(trackings[position])
+//                    Snackbar.make(view, "Selected: ${trackings[position].trackingNumber}", Snackbar.LENGTH_SHORT).show()
+                    println("Selected: ${trackings[position].trackingNumber}")
+//                    findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
                 }
             }
         }

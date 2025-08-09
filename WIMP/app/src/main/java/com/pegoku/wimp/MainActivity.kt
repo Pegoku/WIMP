@@ -30,6 +30,8 @@ import androidx.room.Update
 import com.pegoku.wimp.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 @Entity(tableName = "trackings")
 data class Tracking(
@@ -95,6 +97,10 @@ interface TrackingsDao {
 
     @Query("DELETE FROM trackings WHERE tracking_number = :trackingNumber")
     suspend fun deleteTrackingByTrackingNumber(trackingNumber: String)
+
+    @Query("SELECT events FROM trackings WHERE tracking_number = :trackingNumber")
+    suspend fun getEventsByTrackingNumber(trackingNumber: String): String?
+
 }
 
 @Database(
@@ -123,6 +129,10 @@ abstract class TrackingDatabase : RoomDatabase() {
             }
         }
     }
+}
+
+fun getJsonEventsList(eventsJson: String?): List<TrackingEvent> {
+    return Gson().fromJson(eventsJson ?: "[]", object : TypeToken<List<TrackingEvent>>() {}.type)
 }
 
 class MainActivity : AppCompatActivity() {

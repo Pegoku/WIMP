@@ -17,6 +17,8 @@ import com.google.android.material.card.MaterialCardView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import java.util.Objects.toString
+import kotlin.math.abs
+import com.google.gson.Gson
 
 class FirstFragment : Fragment() {
 
@@ -78,61 +80,87 @@ class FirstFragment : Fragment() {
 
     private fun loadTrackings() {
         lifecycleScope.launch {
-            try {
-                val trackings = trackingsDao.getAllTrackings()
-                if (trackings.isEmpty()) {
-                    binding.emptyListText.visibility = View.VISIBLE
-                    binding.trackingListRecyclerview.visibility = View.GONE
-                } else {
-                    binding.emptyListText.visibility = View.GONE
-                    binding.trackingListRecyclerview.visibility = View.VISIBLE
-                    trackingAdapter.updateList(trackings)
-                }
-            } catch (e: Exception) {
-                Snackbar.make(
-                    binding.root,
-                    "Error loading trackings: ${e.message}",
-                    Snackbar.LENGTH_LONG
-                ).show()
-                println("Error loading trackings: ${e.message}")
+            if (_binding != null) {
+                try {
+                    val trackings = trackingsDao.getAllTrackings()
+                    if (trackings.isEmpty()) {
+                        binding.emptyListText.visibility = View.VISIBLE
+                        binding.trackingListRecyclerview.visibility = View.GONE
+                    } else {
+                        binding.emptyListText.visibility = View.GONE
+                        binding.trackingListRecyclerview.visibility = View.VISIBLE
+                        trackingAdapter.updateList(trackings)
+                    }
+                } catch (e: Exception) {
+                    Snackbar.make(
+                        binding.root,
+                        "Error loading trackings: ${e.message}",
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                    println("Error loading trackings: ${e.message}")
 
+                }
             }
         }
     }
+
+    private fun eventsToJson(events: List<TrackingEvent>?): String {
+        return Gson().toJson(events)
+    }
+
+//    private fun parseHttpResponse(json: String): List<TrackingResponse> {
+//        val gson = Gson()
+//        val response = gson.fromJson(json, TrackingResponse)
+//        return response
+//    }
 
     private fun updateTrackings() {
         lifecycleScope.launch {
             try {
                 val trackings = trackingsDao.getAllTrackings()
                 for (tracking in trackings) {
-                    if (tracking.lastUpdated == null || (tracking.lastUpdated > System.currentTimeMillis() - 1 * 60 * 1000L)) {
+                    if (tracking.lastUpdated == null || (tracking.lastUpdated < System.currentTimeMillis() - 1 * 60 * 1000L)) {
                         val response = RetrofitClient.instance.track(
                             trackingNumber = tracking.trackingNumber,
                             apiKey = "Bearer ${dotenv["API_KEY"]}",
                         )
                         if (response.isSuccessful) {
                             val status = response.body()
-                            println("Status for ${tracking.trackingNumber}: ${status?.data?.trackings?.firstOrNull()?.shipment?.statusMilestone ?: "Unknown"}  ${System.currentTimeMillis()}")
+                            if (status == null || status.data.trackings.isEmpty()) {
+                                println("No tracking data found for ${tracking.trackingNumber}")
+                                continue
+                            }
+                            val trackingData = status.data.trackings.firstOrNull()
+                            println("Data for ${tracking.trackingNumber}: $trackingData")
+                            val jsonEvents = eventsToJson(trackingData?.events)
+                            println("Events for ${tracking.trackingNumber}: $jsonEvents")
+
                             trackingsDao.updateStatusAndEventsByTrackingNumber(
-                                tracking.trackingNumber,
-                                status?.data?.trackings?.firstOrNull()?.events?.toString()
-                                    ?: "No events found",
-                                status?.data?.trackings?.firstOrNull()?.shipment?.statusMilestone
-                                    ?: "Unknown",
-                                System.currentTimeMillis()
+                                trackingNumber = tracking.trackingNumber,
+                                newEvent = jsonEvents,
+                                status = trackingData?.shipment?.statusMilestone ?: "Unknown",
+                                lastUpdated = System.currentTimeMillis()
                             )
-                            println(toString(status?.data?.trackings?.firstOrNull()?.events)
-                                ?: "No events found")
                         } else
-                            if (response.errorBody()?.string()?.contains("tracker_not_found") == true) {
+                            if (response.errorBody()?.string()
+                                    ?.contains("tracker_not_found") == true
+                            ) {
                                 println("Tracking number ${tracking.trackingNumber} not found, removing from database.")
                                 trackingsDao.deleteTrackingByTrackingNumber(tracking.trackingNumber)
                             } else
-                            println(
-                                "Failed to update status for ${tracking.trackingNumber}: ${
-                                    response.errorBody()?.string() ?: "Unknown error"
-                                }"
-                            )
+                                println(
+                                    "Failed to update status for ${tracking.trackingNumber}: ${
+                                        response.errorBody()?.string() ?: "Unknown error"
+                                    }"
+                                )
+                    } else {
+                        println(
+                            "Skipping update for ${tracking.trackingNumber}, last updated ${
+                                abs(
+                                    tracking.lastUpdated - System.currentTimeMillis()
+                                ) / 1000
+                            }s ago."
+                        )
                     }
                 }
                 loadTrackings() // Refresh the list after updating statuses

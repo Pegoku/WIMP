@@ -29,9 +29,6 @@ val dotenv = dotenv {
 }
 
 
-
-
-
 /**
  * A simple [Fragment] subclass as the second destination in the navigation.
  */
@@ -49,7 +46,7 @@ class SecondFragment : Fragment() {
     private lateinit var courierSearchEditText: EditText
     private lateinit var database: TrackingDatabase
     private lateinit var trackingsDao: TrackingsDao
-
+    private lateinit var tracking: Tracking
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -187,7 +184,7 @@ class SecondFragment : Fragment() {
         println("Title: $title")
 
         if (trackingNumber.isNotEmpty() && courierName.isNotEmpty()) {
-            lateinit var tracking: Tracking
+
 
             lifecycleScope.launch {
                 try {
@@ -203,8 +200,7 @@ class SecondFragment : Fragment() {
                         .let { response ->
                             if (response != null) {
                                 println("Tracker created successfully: $response")
-                                if (!response.data.tracker.isTracked) {
-                                    trackingsDao.insertTracking(tracking)
+                                if (trackingsDao.getTrackingByNumber(trackingNumber) == null) {
                                     tracking = Tracking(
                                         trackingNumber = trackingNumber,
                                         courierName = courierName,
@@ -212,14 +208,14 @@ class SecondFragment : Fragment() {
                                         title = title,
                                         addedDate = System.currentTimeMillis()
                                     )
-
+                                    trackingsDao.insertTracking(tracking)
                                 } else {
                                     Snackbar.make(
                                         binding.root,
-                                        "Tracker already exists for this tracking number",
+                                        "Tracking number already exists in the database",
                                         Snackbar.LENGTH_SHORT
                                     ).show()
-                                    println("Tracker already exists for this tracking number")
+                                    println("Tracking number already exists in the database")
                                 }
                             } else {
                                 Snackbar.make(

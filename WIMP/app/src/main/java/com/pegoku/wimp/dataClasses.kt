@@ -133,6 +133,6 @@ data class Couriers(
     val website: String,
     val isPost: Boolean,
     val countryCode: String,
-    val requiredFields: List<String>,
+    val requiredFields: List<String>? = emptyList(),
     val isDeprecated: Boolean
 )

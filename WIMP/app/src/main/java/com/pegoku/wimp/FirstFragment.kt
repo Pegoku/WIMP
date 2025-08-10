@@ -234,6 +234,7 @@ class TrackingAdapter(
         holder.dateText.text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
             .format(Date(tracking.addedDate))
         holder.statusText.text = tracking.status
+
     }
 
     override fun getItemCount(): Int = trackings.size

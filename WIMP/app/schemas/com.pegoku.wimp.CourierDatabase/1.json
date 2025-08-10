@@ -1,0 +1,83 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "d3649be3b16c9a041b24c4c2bbb322e9",
+    "entities": [
+      {
+        "tableName": "couriers",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `courierCode` TEXT NOT NULL, `courierName` TEXT NOT NULL, `website` TEXT, `isPost` INTEGER NOT NULL, `countryCode` TEXT, `needsDestinationPostCode` INTEGER NOT NULL, `needsDestinationCountryCode` INTEGER NOT NULL, `isDeprecated` INTEGER NOT NULL, `lastUpdated` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "uid",
+            "columnName": "uid",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "courierCode",
+            "columnName": "courierCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "courierName",
+            "columnName": "courierName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "website",
+            "columnName": "website",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isPost",
+            "columnName": "isPost",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "countryCode",
+            "columnName": "countryCode",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "needsDestinationPostCode",
+            "columnName": "needsDestinationPostCode",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "needsDestinationCountryCode",
+            "columnName": "needsDestinationCountryCode",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDeprecated",
+            "columnName": "isDeprecated",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastUpdated",
+            "columnName": "lastUpdated",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "uid"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd3649be3b16c9a041b24c4c2bbb322e9')"
+    ]
+  }
+}

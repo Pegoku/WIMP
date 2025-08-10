@@ -2,7 +2,6 @@ package com.pegoku.wimp
 
 import android.content.Context
 import android.os.Bundle
-import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -10,16 +9,12 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import android.view.Menu
 import android.view.MenuItem
-import androidx.collection.mutableIntIntMapOf
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.room.AutoMigration
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -28,8 +23,6 @@ import androidx.room.RoomDatabase
 import androidx.room.Update
 
 import com.pegoku.wimp.databinding.ActivityMainBinding
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.supervisorScope
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -52,8 +45,13 @@ data class Tracking(
     @ColumnInfo(name = "events")
     val events: String? = null,
     @ColumnInfo(name = "last_updated")
-    val lastUpdated: Long? = 0
+    val lastUpdated: Long? = 0,
+    @ColumnInfo(name = "destination_post_code")
+    val destinationPostCode: String? = null,
+    @ColumnInfo(name = "destination_Country_Code")
+    val destinationCountryCode: String? = null,
 )
+
 
 @Dao
 interface TrackingsDao {
@@ -105,9 +103,9 @@ interface TrackingsDao {
 
 @Database(
     entities = [Tracking::class],
-    version = 4,
+    version = 5,
     autoMigrations = [
-        AutoMigration(from = 3, to = 4)
+        AutoMigration(from = 4, to = 5)
     ]
 )
 abstract class TrackingDatabase : RoomDatabase() {
@@ -131,6 +129,76 @@ abstract class TrackingDatabase : RoomDatabase() {
     }
 }
 
+
+
+@Entity(tableName = "couriers")
+data class Courier(
+    @PrimaryKey(autoGenerate = true)
+    val uid: Int = 0,
+    @ColumnInfo(name = "courierCode")
+    val courierCode: String,
+    @ColumnInfo(name = "courierName")
+    val courierName: String,
+    @ColumnInfo(name = "website")
+    val website: String? = null,
+    @ColumnInfo(name = "isPost")
+    val isPost: Boolean = false,
+    @ColumnInfo(name = "countryCode")
+    val countryCode: String? = null,
+    @ColumnInfo(name = "needsDestinationPostCode")
+    val needsDestinationPostCode: Boolean = false,
+    @ColumnInfo(name = "needsDestinationCountryCode")
+    val needsDestinationCountryCode: Boolean = false,
+    @ColumnInfo(name = "isDeprecated")
+    val isDeprecated: Boolean = false,
+    @ColumnInfo(name = "lastUpdated")
+    val lastUpdated: Long = System.currentTimeMillis(),
+)
+
+@Dao
+interface CourierDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCourier(courier: Courier): Long
+
+    @Query("SELECT * FROM couriers WHERE courierCode = :courierCode")
+    suspend fun checkIfCourierExists(courierCode: String): Courier?
+
+    suspend fun addCourier(courier: Courier) {
+        if (checkIfCourierExists(courier.courierCode) == null) {
+            insertCourier(courier)
+        }
+    }
+
+    @Query("SELECT * FROM couriers")
+    suspend fun getAllCouriers(): List<Courier>
+
+}
+
+@Database(
+    entities = [Courier::class],
+    version = 1,
+    exportSchema = true
+)
+abstract class CourierDatabase : RoomDatabase() {
+    abstract fun courierDao(): CourierDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: com.pegoku.wimp.CourierDatabase? = null
+
+        fun getDatabase(context: Context): com.pegoku.wimp.CourierDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    com.pegoku.wimp.CourierDatabase::class.java,
+                    "courier_database"
+                ).build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+}
 fun getJsonEventsList(eventsJson: String?): List<TrackingEvent> {
     return Gson().fromJson(eventsJson ?: "[]", object : TypeToken<List<TrackingEvent>>() {}.type)
 }

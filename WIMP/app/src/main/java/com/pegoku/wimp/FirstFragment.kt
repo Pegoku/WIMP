@@ -73,9 +73,9 @@ class FirstFragment : Fragment() {
 
         setupRecyclerView()
         updateTrackings()
-        if (binding.bottomNavigation.selectedItemId == R.id.bottom_nav_all) {
-            loadTrackings()
-        }
+//        if (binding.bottomNavigation.selectedItemId == R.id.bottom_nav_all) {
+//            loadTrackings()
+//        }
         binding.buttonFirst.setOnClickListener {
             findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
         }

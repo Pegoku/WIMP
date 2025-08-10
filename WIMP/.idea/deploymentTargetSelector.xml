@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-08-10T17:35:40.158829442Z">
+        <DropdownSelection timestamp="2025-08-10T20:11:23.324061246Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=/home/pegoku/.android/avd/Medium_Phone.avd" />
+              <DeviceId pluginId="Default" identifier="serial=192.168.1.100:42875;connection=71090c64" />
             </handle>
           </Target>
         </DropdownSelection>

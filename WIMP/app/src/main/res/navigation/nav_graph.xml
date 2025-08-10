@@ -17,6 +17,11 @@
         <action
             android:id="@+id/action_FirstFragment_to_ShipmentInfo"
             app:destination="@id/ShipmentInfo" />
+
+        <action
+            android:id="@+id/action_FirstFragment_to_Settings"
+            app:destination="@id/Settings" />
+
     </fragment>
     <fragment
         android:id="@+id/SecondFragment"
@@ -37,10 +42,20 @@
 
         <action
             android:id="@+id/action_ShipmentInfo_to_FirstFragment"
-        app:destination="@id/FirstFragment" />
+            app:destination="@id/FirstFragment" />
         <action
             android:id="@+id/action_ShipmentInfo_to_SecondFragment"
-            app:destination="@+id/SecondFragment"
-            />
+            app:destination="@+id/SecondFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/Settings"
+        android:name="com.pegoku.wimp.Setting"
+        android:label="Settings"
+        tools:layout="@layout/settings">
+
+        <action
+            android:id="@+id/action_Settings_to_FirstFragment"
+            app:destination="@+id/FirstFragment" />
     </fragment>
 </navigation>

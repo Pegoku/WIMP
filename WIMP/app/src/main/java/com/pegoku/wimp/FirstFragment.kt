@@ -3,6 +3,9 @@ package com.pegoku.wimp
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
@@ -15,6 +18,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import com.google.android.material.card.MaterialCardView
 import android.widget.TextView
+import androidx.core.view.MenuProvider
 import androidx.recyclerview.widget.RecyclerView
 import java.util.Objects.toString
 import kotlin.math.abs
@@ -57,14 +61,6 @@ class FirstFragment : Fragment() {
             findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
         }
 
-
-
-
-
-
-
-
-
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.bottom_nav_all -> {
@@ -91,6 +87,27 @@ class FirstFragment : Fragment() {
 
             }
         }
+
+        requireActivity().addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.start_menu, menu)
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return when (menuItem.itemId) {
+                    R.id.action_settings -> {
+                        findNavController().navigate(
+                            R.id.action_FirstFragment_to_Settings,
+                        )
+                        true
+                    }
+
+                    else -> false
+                }
+            }
+        }, viewLifecycleOwner) // , Lifecycle.State.RESUMED)
+
+
     }
 
     private fun setupRecyclerView() {
@@ -276,8 +293,7 @@ class TrackingAdapter(
         holder.dateText.text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
             .format(Date(tracking.addedDate))
         holder.statusText.text =
-            when (tracking.status)
-            {
+            when (tracking.status) {
                 "pending" -> "Waiting for data"
                 "in_transit" -> "In transit"
                 "delivered" -> "Delivered"

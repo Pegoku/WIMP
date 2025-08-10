@@ -65,7 +65,8 @@ class ShipmentInfo : Fragment() {
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                 return when (menuItem.itemId) {
                     R.id.action_edit -> {
-                        findNavController().navigate(R.id.action_ShipmentInfo_to_SecondFragment,
+                        findNavController().navigate(
+                            R.id.action_ShipmentInfo_to_SecondFragment,
                             Bundle().apply {
                                 putString("trackingCode", arguments?.getString("trackingCode"))
                             })
@@ -175,11 +176,24 @@ class ShipmentEventAdapter(private var events: List<TrackingEvent>) :
 //        holder.date.text = SimpleDateFormat(
 //            "yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
             val outputFormat = SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.getDefault())
-            val date = inputFormat.parse(event.occurrenceDatetime)
+            val formats = listOf(
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()),
+                SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS'Z'", Locale.getDefault()),
+                SimpleDateFormat("yyyy-MM-dd HH:mm:ssXXX", Locale.getDefault())
+            )
+            var parsedDate: Date? = null
+            for (format in formats) {
+                try {
+                    parsedDate = format.parse(event.occurrenceDatetime)
+                    break
+                } catch (e: Exception) {
+                    // Continue to the next format if parsing fails
+                    continue
+                }
+            }
             holder.date.text =
-                if (date != null) outputFormat.format(date) else event.occurrenceDatetime
+                if (parsedDate != null) outputFormat.format(parsedDate) else event.occurrenceDatetime
         } catch (e: Exception) {
             holder.date.text = event.occurrenceDatetime // Fallback if parsing fails
         }

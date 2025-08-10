@@ -216,6 +216,55 @@ abstract class CourierDatabase : RoomDatabase() {
     }
 }
 
+@Entity
+data class Settings(
+    @PrimaryKey(autoGenerate = true)
+    val uid: Int = 0,
+    @ColumnInfo(name = "apiKey")
+    val apiKey: String? = null
+)
+
+@Dao
+interface SettingsDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSettings(settings: Settings): Long
+
+    @Query("SELECT * FROM settings LIMIT 1")
+    suspend fun getSettings(): Settings?
+
+    @Update(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun updateSettings(settings: Settings)
+
+    @Query("DELETE FROM settings")
+    suspend fun deleteSettings()
+}
+
+@Database(
+    entities = [Settings::class],
+    version = 1,
+    exportSchema = true
+)
+abstract class SettingsDatabase : RoomDatabase() {
+    abstract fun settingsDao(): SettingsDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: SettingsDatabase? = null
+        fun getDatabase(context: Context): SettingsDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    SettingsDatabase::class.java,
+                    "settings_database"
+                ).build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+}
+
+
 fun getJsonEventsList(eventsJson: String?): List<TrackingEvent> {
     return Gson().fromJson(eventsJson ?: "[]", object : TypeToken<List<TrackingEvent>>() {}.type)
 }

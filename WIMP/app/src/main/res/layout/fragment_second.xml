@@ -69,14 +69,61 @@
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
             android:layout_marginEnd="8dp"
-            android:visibility="gone"
-            android:scrollbars="vertical"
             android:scrollbarStyle="outsideOverlay"
             android:scrollbarThumbVertical="@drawable/scrollbar_thumb"
             android:scrollbarTrackVertical="@drawable/scrollbar_track"
+            android:scrollbars="vertical"
+            android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/courierSearchFieldLayout" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/postalCodeFieldLayout"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="8dp"
+            android:hint="Postal Code"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/searchResultsRecyclerView">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/postalCodeTextField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:inputType="text" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/countryCodeFieldLayout"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="8dp"
+            android:visibility="gone"
+            android:hint="Country Code (ISO 3166-1 alpha-2)"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/postalCodeFieldLayout">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/countryCodeTextField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:inputType="text" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/titleFieldLayout"
@@ -89,7 +136,7 @@
             android:hint="Title (Optional)"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/searchResultsRecyclerView">
+            app:layout_constraintTop_toBottomOf="@+id/countryCodeFieldLayout">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/titleTextField"

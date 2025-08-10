@@ -172,6 +172,9 @@ interface CourierDao {
     @Query("SELECT * FROM couriers")
     suspend fun getAllCouriers(): List<Courier>
 
+    @Query("SELECT * FROM couriers WHERE courierCode = :courierCode")
+    suspend fun getCourierByCode(courierCode: String): Courier?
+
 }
 
 @Database(

@@ -88,6 +88,7 @@ class SecondFragment : Fragment() {
         courierSearchEditText = view.findViewById(R.id.courierSearchEditText)
         searchResultsRecyclerView = view.findViewById(R.id.searchResultsRecyclerView)
 
+
         val searchAdapter = CourierAdapter(filteredList) { selectedCourier ->
             binding.courierSearchEditText.setText(selectedCourier.courierName)
             searchResultsRecyclerView.visibility = View.GONE
@@ -95,6 +96,23 @@ class SecondFragment : Fragment() {
             selectedCourierCode = selectedCourier.courierCode
             courierSearchEditText.clearFocus()
             println("Selected courier: ${selectedCourier.courierName}")
+            lifecycleScope.launch {
+                if (courierDao.getCourierByCode(selectedCourier.courierCode)?.needsDestinationPostCode
+                        ?: false
+                ) {
+                    binding.postalCodeFieldLayout.visibility = View.VISIBLE
+                } else {
+                    binding.postalCodeFieldLayout.visibility = View.GONE
+                }
+                if (courierDao.getCourierByCode(selectedCourier.courierCode)?.needsDestinationCountryCode
+                        ?: false
+                ) {
+                    binding.countryCodeFieldLayout.visibility = View.VISIBLE
+                } else {
+                    binding.countryCodeFieldLayout.visibility = View.GONE
+                }
+            }
+
 
         }
 
@@ -158,185 +176,200 @@ class SecondFragment : Fragment() {
                                 countryCode = courier.countryCode,
                                 needsDestinationPostCode = courier.requiredFields?.contains("destinationPostCode") == true,
                                 needsDestinationCountryCode = courier.requiredFields?.contains("destinationCountryCode") == true,
-                                    isDeprecated = courier.isDeprecated,
-                                )
-                                courierDao.insertCourier(courierEntity)
-                            }
-
-
-                        }
-                        response.body()?.data?.couriers?.map { courier ->
-                            Courier(
-                                courierCode = courier.courierCode,
-                                courierName = courier.courierName,
-                                website = courier.website,
-                                isPost = courier.isPost,
-                                countryCode = courier.countryCode,
-                                needsDestinationPostCode = courier.requiredFields?.contains("destinationPostCode") == true,
-                                needsDestinationCountryCode = courier.requiredFields?.contains("destinationCountryCode") == true,
-                                isDeprecated = courier.isDeprecated
+                                isDeprecated = courier.isDeprecated,
                             )
-                        } ?: emptyList()
-                    } else {
-                        null
-                    }
-                } catch (exception: Exception) {
-                    println("Error fetching couriers: ${exception.message}")
-                    null
-                } as List<Courier>?
-            }
-        }
+                            courierDao.insertCourier(courierEntity)
+                        }
 
-        suspend fun createTracker(
-            trackingNumber: String,
-            courierCode: String,
-            destinationPostCode: String? = null
-        ): TrackerCreateResponse? {
-            return try {
-                val response = RetrofitClient.instance.createTracker(
-                    apiKey = "Bearer ${dotenv["API_KEY"]}",
-                    body = TrackerCreateBody(
-                        trackingNumber = trackingNumber,
-                        courierCode = courierCode,
-                        destinationPostCode = destinationPostCode
-                    )
-                )
-                if (response.isSuccessful) {
-                    response.body()
+
+                    }
+                    response.body()?.data?.couriers?.map { courier ->
+                        Courier(
+                            courierCode = courier.courierCode,
+                            courierName = courier.courierName,
+                            website = courier.website,
+                            isPost = courier.isPost,
+                            countryCode = courier.countryCode,
+                            needsDestinationPostCode = courier.requiredFields?.contains("destinationPostCode") == true,
+                            needsDestinationCountryCode = courier.requiredFields?.contains("destinationCountryCode") == true,
+                            isDeprecated = courier.isDeprecated
+                        )
+                    } ?: emptyList()
                 } else {
-                    println("Error creating tracker: ${response.errorBody()?.string()}")
                     null
                 }
             } catch (exception: Exception) {
-                println("Error creating tracker: ${exception.message}")
-            } as TrackerCreateResponse?
+                println("Error fetching couriers: ${exception.message}")
+                null
+            } as List<Courier>?
         }
+    }
 
-        private fun saveTracking() {
-            val trackingNumber = binding.trackingNumberText.text.toString().trim()
-            val courierName = selectedCourierName ?: ""
-            val title = binding.titleTextField.text.toString().trim()
+    suspend fun createTracker(
+        trackingNumber: String,
+        courierCode: String,
+        destinationPostCode: String? = null
+    ): TrackerCreateResponse? {
+        return try {
+            val response = RetrofitClient.instance.createTracker(
+                apiKey = "Bearer ${dotenv["API_KEY"]}",
+                body = TrackerCreateBody(
+                    trackingNumber = trackingNumber,
+                    courierCode = courierCode,
+                    destinationPostCode = destinationPostCode
+                )
+            )
+            if (response.isSuccessful) {
+                response.body()
+            } else {
+                println("Error creating tracker: ${response.errorBody()?.string()}")
+                null
+            }
+        } catch (exception: Exception) {
+            println("Error creating tracker: ${exception.message}")
+        } as TrackerCreateResponse?
+    }
 
-            println("Tracking Number: $trackingNumber")
-            println("Courier Name: $courierName")
-    //        println("Courier Code: $courierCode")
-            println("Title: $title")
+    private fun saveTracking() {
+        val trackingNumber = binding.trackingNumberText.text.toString().trim()
+        val courierName = selectedCourierName ?: ""
+        val title = binding.titleTextField.text.toString().trim()
+        val postalCode = binding.postalCodeTextField.text.toString().trim()
+        val countryCode = binding.countryCodeTextField.text.toString().trim()
+        println("Tracking Number: $trackingNumber")
+        println("Courier Name: $courierName")
+        //        println("Courier Code: $courierCode")
+        println("Title: $title")
+        println("Postal code: $postalCode")
+        println("Country code: $countryCode")
 
-            if (trackingNumber.isNotEmpty() && courierName.isNotEmpty()) {
+        lifecycleScope.launch {
 
+            if (trackingNumber.isNotEmpty() && courierName.isNotEmpty() && if (courierDao.getCourierByCode(
+                        getCourierCodeByName(courierName)
+                    )?.needsDestinationPostCode == true
+                ) postalCode.isNotEmpty() else true && if (courierDao.getCourierByCode(
+                        getCourierCodeByName(
+                            courierName
+                        )
+                    )?.needsDestinationCountryCode == true
+                ) countryCode.isNotEmpty() && countryCode.length == 2 else true
+            ) {
+                try {
+                    Snackbar.make(
+                        binding.root,
+                        "Tracking saved successfully",
+                        Snackbar.LENGTH_SHORT
+                    ).show()
 
-                lifecycleScope.launch {
-                    try {
-
-                        Snackbar.make(
-                            binding.root,
-                            "Tracking saved successfully",
-                            Snackbar.LENGTH_SHORT
-                        ).show()
-
-                        // create tracker for Ship24
-                        createTracker(trackingNumber, getCourierCodeByName(courierName))
-                            .let { response ->
-                                if (response != null) {
-                                    println("Tracker created successfully: $response")
-                                    if (trackingsDao.getTrackingByNumber(trackingNumber) == null) {
-                                        tracking = Tracking(
-                                            trackingNumber = trackingNumber,
-                                            courierName = courierName,
-                                            courierCode = getCourierCodeByName(courierName),
-                                            title = title,
-                                            addedDate = System.currentTimeMillis()
-                                        )
-                                        trackingsDao.insertTracking(tracking)
-                                    } else {
-                                        Snackbar.make(
-                                            binding.root,
-                                            "Tracking number already exists in the database",
-                                            Snackbar.LENGTH_SHORT
-                                        ).show()
-                                        println("Tracking number already exists in the database")
-                                    }
+                    // create tracker for Ship24
+                    createTracker(trackingNumber, getCourierCodeByName(courierName))
+                        .let { response ->
+                            if (response != null) {
+                                println("Tracker created successfully: $response")
+                                if (trackingsDao.getTrackingByNumber(trackingNumber) == null) {
+                                    tracking = Tracking(
+                                        trackingNumber = trackingNumber,
+                                        courierName = courierName,
+                                        courierCode = getCourierCodeByName(courierName),
+                                        title = title,
+                                        addedDate = System.currentTimeMillis(),
+                                        lastUpdated = 0 // So it will be fetched immediately
+                                    )
+                                    trackingsDao.insertTracking(tracking)
                                 } else {
                                     Snackbar.make(
                                         binding.root,
-                                        "Failed to create tracker",
+                                        "Tracking number already exists in the database",
                                         Snackbar.LENGTH_SHORT
                                     ).show()
+                                    println("Tracking number already exists in the database")
                                 }
+                            } else {
+                                Snackbar.make(
+                                    binding.root,
+                                    "Failed to create tracker",
+                                    Snackbar.LENGTH_SHORT
+                                ).show()
                             }
+                        }
 
-                        clearFields()
-                    } catch (e: Exception) {
-                        Snackbar.make(
-                            binding.root,
-                            "Error saving tracking: ${e.message}",
-                            Snackbar.LENGTH_SHORT
-                        ).show()
-                        println("Error saving tracking: ${e.message}")
-                    }
+                    clearFields()
+                } catch (e: Exception) {
+                    Snackbar.make(
+                        binding.root,
+                        "Error saving tracking: ${e.message}",
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                    println("Error saving tracking: ${e.message}")
                 }
             } else {
-                Snackbar.make(binding.root, "Please fill in all the fields", Snackbar.LENGTH_SHORT)
+                Snackbar.make(
+                    binding.root,
+                    "Please fill in all the fields",
+                    Snackbar.LENGTH_SHORT
+                )
                     .show()
             }
         }
-
-        private fun getCourierCodeByName(courierName: String): String {
-            return couriersList?.find { it.courierName == courierName }?.courierCode ?: ""
-        }
-
-        private fun clearFields() {
-            binding.trackingNumberText.setText("")
-            binding.courierSearchEditText.setText("")
-            binding.titleTextField.setText("")
-            selectedCourierName = null
-            selectedCourierCode = null
-            findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
-        }
-
     }
 
-    class CourierAdapter(
-        private var couriers: List<Courier>,
-        private val onItemClick: (Courier) -> Unit
+    private fun getCourierCodeByName(courierName: String): String {
+        return couriersList?.find { it.courierName == courierName }?.courierCode ?: ""
+    }
 
-    ) :
-        RecyclerView.Adapter<CourierAdapter.CourierViewHolder>() {
+    private fun clearFields() {
+        binding.trackingNumberText.setText("")
+        binding.courierSearchEditText.setText("")
+        binding.titleTextField.setText("")
+        selectedCourierName = null
+        selectedCourierCode = null
+        findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
+    }
+
+}
+
+class CourierAdapter(
+    private var couriers: List<Courier>,
+    private val onItemClick: (Courier) -> Unit
+
+) :
+    RecyclerView.Adapter<CourierAdapter.CourierViewHolder>() {
 
 
-        inner class CourierViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            val textView: TextView = view.findViewById(R.id.textViewCourier)
+    inner class CourierViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val textView: TextView = view.findViewById(R.id.textViewCourier)
 
-            init {
-                view.setOnClickListener {
-                    val position = adapterPosition
-                    if (position != RecyclerView.NO_POSITION) {
-                        onItemClick(couriers[position])
+        init {
+            view.setOnClickListener {
+                val position = adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    onItemClick(couriers[position])
 
-                    }
                 }
             }
         }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CourierViewHolder {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_courier, parent, false)
-            return CourierViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: CourierViewHolder, position: Int) {
-            val courier = couriers[position]
-    //        SecondFragment.selectedCourierName = courier.courierName
-            holder.textView.text = courier.courierName
-            holder.itemView.setOnClickListener {
-                onItemClick(courier)
-            }
-    //        holder.textView.text = couriers[position].courierName
-        }
-
-        override fun getItemCount(): Int = couriers.size
-
-        fun updateList(newList: List<Courier>) {
-            couriers = newList
-            notifyDataSetChanged()
-        }
     }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CourierViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_courier, parent, false)
+        return CourierViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: CourierViewHolder, position: Int) {
+        val courier = couriers[position]
+        //        SecondFragment.selectedCourierName = courier.courierName
+        holder.textView.text = courier.courierName
+        holder.itemView.setOnClickListener {
+            onItemClick(courier)
+        }
+        //        holder.textView.text = couriers[position].courierName
+    }
+
+    override fun getItemCount(): Int = couriers.size
+
+    fun updateList(newList: List<Courier>) {
+        couriers = newList
+        notifyDataSetChanged()
+    }
+}

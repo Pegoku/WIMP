@@ -3,6 +3,9 @@ package com.pegoku.wimp
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
@@ -13,6 +16,8 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import android.widget.TextView
+import androidx.core.view.MenuHost
+import androidx.core.view.MenuProvider
 import androidx.recyclerview.widget.RecyclerView
 import com.pegoku.wimp.databinding.ShipmentInfoBinding
 
@@ -51,6 +56,56 @@ class ShipmentInfo : Fragment() {
             findNavController().navigate(R.id.action_ShipmentInfo_to_FirstFragment)
         }
         loadEvents(arguments?.getString("trackingCode") ?: "")
+
+        requireActivity().addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.shipment_menu, menu)
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return when (menuItem.itemId) {
+                    R.id.action_edit -> {
+                        findNavController().navigate(R.id.action_ShipmentInfo_to_SecondFragment,
+                            Bundle().apply {
+                                putString("trackingCode", arguments?.getString("trackingCode"))
+                            })
+                        true
+                    }
+
+                    R.id.action_delete -> {
+                        lifecycleScope.launch {
+                            println("Deleting ${arguments?.getString("trackingCode")}")
+                            trackingsDao.deleteTrackingByTrackingNumber(
+                                arguments?.getString("trackingCode") ?: ""
+                            )
+                        }
+                        findNavController().navigate(R.id.action_ShipmentInfo_to_FirstFragment)
+                        true
+                    }
+
+                    R.id.action_mark_delivered -> {
+                        lifecycleScope.launch {
+                            println(
+                                "Marking as delivered for tracking code: ${
+                                    arguments?.getString(
+                                        "trackingCode"
+                                    )
+                                }"
+                            )
+                            trackingsDao.updateStatusByTrackingNumber(
+                                arguments?.getString("trackingCode") ?: "",
+                                "delivered"
+                            )
+                        }
+                        findNavController().navigate(R.id.action_ShipmentInfo_to_FirstFragment)
+                        true
+                    }
+
+                    else -> false
+                }
+            }
+        }, viewLifecycleOwner) // , Lifecycle.State.RESUMED)
+
     }
 
 

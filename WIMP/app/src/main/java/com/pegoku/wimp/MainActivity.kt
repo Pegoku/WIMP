@@ -8,7 +8,6 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import android.view.Menu
-import android.view.MenuItem
 import androidx.room.AutoMigration
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -62,10 +61,7 @@ interface TrackingsDao {
     suspend fun getAllTrackings(): List<Tracking>
 
     @Query("SELECT * FROM trackings WHERE tracking_number = :trackingNumber")
-    suspend fun getTrackingByNumber(trackingNumber: String): Tracking?
-
-    @Query("DELETE FROM trackings WHERE tracking_number = :trackingNumber")
-    suspend fun deleteTrackingByNumber(trackingNumber: String)
+    suspend fun getTrackingByTrackingNumber(trackingNumber: String): Tracking?
 
     @Query("SELECT * FROM trackings WHERE uid = :uid")
     suspend fun getTrackingById(uid: Int): Tracking?
@@ -102,6 +98,21 @@ interface TrackingsDao {
     @Query("SELECT * FROM trackings WHERE status = :status ORDER BY added_date DESC")
     suspend fun getTrackingsByStatus(status: String): List<Tracking>
 
+    @Query("UPDATE trackings SET tracking_number = :trackingNumber, courier_name = :courierName, courier_code = :courierCode, title = :title, destination_post_code = :destinationPostCode, destination_Country_Code = :destinationCountryCode, last_updated = :lastUpdated WHERE uid = :uid")
+    suspend fun updateTrackingDetails(
+        uid: Int,
+        trackingNumber: String,
+        courierName: String,
+        courierCode: String,
+        title: String?,
+        lastUpdated: Long,
+        destinationPostCode: String?,
+        destinationCountryCode: String?,
+    )
+
+    @Query("SELECT uid FROM trackings WHERE tracking_number = :trackingNumber")
+    suspend fun getIdByTrackingNumber(trackingNumber: String): Int
+
 }
 
 @Database(
@@ -131,7 +142,6 @@ abstract class TrackingDatabase : RoomDatabase() {
         }
     }
 }
-
 
 
 @Entity(tableName = "couriers")
@@ -205,6 +215,7 @@ abstract class CourierDatabase : RoomDatabase() {
         }
     }
 }
+
 fun getJsonEventsList(eventsJson: String?): List<TrackingEvent> {
     return Gson().fromJson(eventsJson ?: "[]", object : TypeToken<List<TrackingEvent>>() {}.type)
 }
@@ -228,24 +239,35 @@ class MainActivity : AppCompatActivity() {
         appBarConfiguration = AppBarConfiguration(navController.graph)
         setupActionBarWithNavController(navController, appBarConfiguration)
 
+        navController.addOnDestinationChangedListener { _, _, _ ->
+            // Recreate the options menu when the destination changes
+            invalidateOptionsMenu()
+        }
 
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.menu_main, menu)
+//        val navController = findNavController(R.id.nav_host_fragment_content_main)
+//        val currentDestination = navController.currentDestination
+//
+//        if (currentDestination?.id == R.id.ShipmentInfo) {
+//            menuInflater.inflate(R.menu.shipment_menu, menu)
+////        menuInflater.inflate(R.menu.shipment_menu, menu)
+//
+//        }
+
         return true
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up addShipmentButton, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        return when (item.itemId) {
-            R.id.action_settings -> true
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
+//    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+//        // Handle action bar item clicks here. The action bar will
+//        // automatically handle clicks on the Home/Up addShipmentButton, so long
+//        // as you specify a parent activity in AndroidManifest.xml.
+//        return when (item.itemId) {
+//            R.id.action_settings -> true
+//            else -> super.onOptionsItemSelected(item)
+//        }
+//    }
 
     override fun onSupportNavigateUp(): Boolean {
         val navController = findNavController(R.id.nav_host_fragment_content_main)

@@ -37,9 +37,10 @@
 
         <action
             android:id="@+id/action_ShipmentInfo_to_FirstFragment"
-            app:destination="@id/FirstFragment" />
-
-
-
+        app:destination="@id/FirstFragment" />
+        <action
+            android:id="@+id/action_ShipmentInfo_to_SecondFragment"
+            app:destination="@+id/SecondFragment"
+            />
     </fragment>
 </navigation>

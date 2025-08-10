@@ -62,7 +62,6 @@ class SecondFragment : Fragment() {
 
     }
 
-
     @SuppressLint("CutPasteId")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -146,6 +145,29 @@ class SecondFragment : Fragment() {
 
         })
 
+        // Handle edit shipment
+        if (arguments?.getString("trackingCode") != null) {
+            lifecycleScope.launch {
+                val trackingNumber = arguments?.getString("trackingCode")
+                val trackingQuery = trackingsDao.getTrackingByTrackingNumber(trackingNumber ?: "")
+                val courierCode = trackingQuery?.courierCode ?: ""
+                val corierName = trackingQuery?.courierName ?: ""
+                val title = trackingQuery?.title ?: ""
+                val postalCode = trackingQuery?.destinationPostCode ?: ""
+                val countryCode = trackingQuery?.destinationCountryCode ?: ""
+
+                println("trackingNUmber: $trackingNumber")
+
+                binding.trackingNumberText.setText(trackingNumber)
+                selectedCourierName = corierName
+                selectedCourierCode = courierCode
+                binding.courierSearchEditText.setText(corierName)
+                binding.titleTextField.setText(title)
+                binding.postalCodeTextField.setText(postalCode)
+                binding.countryCodeTextField.setText(countryCode)
+            }
+
+        }
 
     }
 
@@ -267,16 +289,34 @@ class SecondFragment : Fragment() {
                         .let { response ->
                             if (response != null) {
                                 println("Tracker created successfully: $response")
-                                if (trackingsDao.getTrackingByNumber(trackingNumber) == null) {
+                                if (trackingsDao.getTrackingByTrackingNumber(trackingNumber) == null) {
                                     tracking = Tracking(
                                         trackingNumber = trackingNumber,
                                         courierName = courierName,
                                         courierCode = getCourierCodeByName(courierName),
                                         title = title,
                                         addedDate = System.currentTimeMillis(),
-                                        lastUpdated = 0 // So it will be fetched immediately
+                                        lastUpdated = 0, // So it will be fetched immediately
+                                        destinationPostCode = postalCode,
+                                        destinationCountryCode = countryCode
                                     )
                                     trackingsDao.insertTracking(tracking)
+                                } else if (arguments?.getString("trackingCode") != null) { // If is editing an existing tracking
+
+                                    tracking = Tracking(
+                                        uid = trackingsDao.getIdByTrackingNumber(trackingNumber),
+                                        trackingNumber = trackingNumber,
+                                        courierName = courierName,
+                                        courierCode = getCourierCodeByName(courierName),
+                                        title = title,
+                                        lastUpdated = 0, // So it will be fetched immediately
+                                        destinationPostCode = postalCode,
+                                        destinationCountryCode = countryCode,
+                                        addedDate = System.currentTimeMillis(),
+                                    )
+                                    trackingsDao.updateTracking(tracking)
+
+                                    println("Tracking updated successfully: $tracking")
                                 } else {
                                     Snackbar.make(
                                         binding.root,

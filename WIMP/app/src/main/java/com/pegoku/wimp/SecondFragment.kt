@@ -49,6 +49,7 @@ class SecondFragment : Fragment() {
     private lateinit var courierDatabase: CourierDatabase
     private lateinit var courierDao: CourierDao
     private lateinit var tracking: Tracking
+    private lateinit var apiKey: String
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -56,7 +57,7 @@ class SecondFragment : Fragment() {
     ): View {
 
         _binding = FragmentSecondBinding.inflate(inflater, container, false)
-        println(dotenv["API_KEY"])
+//        println(RetrofitClient.getApiKey(requireContext()))
         println(dotenv["BASE_URL"])
         return binding.root
 
@@ -65,6 +66,18 @@ class SecondFragment : Fragment() {
     @SuppressLint("CutPasteId")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        lifecycleScope.launch {
+            apiKey = RetrofitClient.getApiKey(requireContext())
+            if (apiKey.isEmpty()) {
+//                findNavController().navigate(R.id.action_FirstFragment_to_Settings)
+                Snackbar.make(
+                    binding.root,
+                    "No API key configured. Please set your API key in settings.",
+                    Snackbar.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+        }
 
         database = TrackingDatabase.getDatabase(requireContext())
         trackingsDao = database.trackingsDao()
@@ -129,7 +142,8 @@ class SecondFragment : Fragment() {
                 val query = s.toString().lowercase()
                 println("Text changed: ${query}")
                 filteredList =
-                    couriersList?.filter { it.courierName.lowercase().contains(query) } ?: listOf()
+                    couriersList?.filter { it.courierName.lowercase().contains(query) }
+                        ?: listOf()
                 println(filteredList)
                 // Update adapter with filtered list
                 searchAdapter.updateList(filteredList)
@@ -140,7 +154,14 @@ class SecondFragment : Fragment() {
 
             }
 
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun beforeTextChanged(
+                s: CharSequence?,
+                start: Int,
+                count: Int,
+                after: Int
+            ) {
+            }
+
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
 
         })
@@ -149,7 +170,8 @@ class SecondFragment : Fragment() {
         if (arguments?.getString("trackingCode") != null) {
             lifecycleScope.launch {
                 val trackingNumber = arguments?.getString("trackingCode")
-                val trackingQuery = trackingsDao.getTrackingByTrackingNumber(trackingNumber ?: "")
+                val trackingQuery =
+                    trackingsDao.getTrackingByTrackingNumber(trackingNumber ?: "")
                 val courierCode = trackingQuery?.courierCode ?: ""
                 val corierName = trackingQuery?.courierName ?: ""
                 val title = trackingQuery?.title ?: ""
@@ -182,7 +204,7 @@ class SecondFragment : Fragment() {
         } else {
             return try {
                 val response = RetrofitClient.instance.getCouriers(
-                    apiKey = "Bearer ${dotenv["API_KEY"]}",
+                    apiKey = "Bearer $apiKey",
                     accept = "application/json"
                 )
                 if (response.isSuccessful) {
@@ -234,7 +256,7 @@ class SecondFragment : Fragment() {
     ): TrackerCreateResponse? {
         return try {
             val response = RetrofitClient.instance.createTracker(
-                apiKey = "Bearer ${dotenv["API_KEY"]}",
+                apiKey = "Bearer $apiKey",
                 body = TrackerCreateBody(
                     trackingNumber = trackingNumber,
                     courierCode = courierCode,
@@ -392,7 +414,8 @@ class CourierAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CourierViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_courier, parent, false)
+        val view =
+            LayoutInflater.from(parent.context).inflate(R.layout.item_courier, parent, false)
         return CourierViewHolder(view)
     }
 

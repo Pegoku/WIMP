@@ -1,12 +1,16 @@
 package com.pegoku.wimp
 
 import android.os.Bundle
+import android.text.Html
+import android.text.method.LinkMovementMethod
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import com.pegoku.wimp.databinding.SettingsBinding
 
@@ -32,6 +36,14 @@ class Setting : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        val apiKeyLayout = view.findViewById<TextInputLayout>(R.id.apiKeyLayout)
+        var helperTextString = "For more information, visit <a href=\"https://www.ship24.com/tracking-api\">Ship24 API</a>"
+
+        apiKeyLayout.helperText = Html.fromHtml(helperTextString, Html.FROM_HTML_MODE_LEGACY)
+        var helperTextView = apiKeyLayout.findViewById<TextView>(com.google.android.material.R.id.textinput_helper_text)
+        helperTextView?.movementMethod = LinkMovementMethod.getInstance()
+
         lifecycleScope.launch {
             database = SettingsDatabase.getDatabase(requireContext())
             settingsDao = database.settingsDao()

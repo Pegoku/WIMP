@@ -18,6 +18,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import com.google.android.material.card.MaterialCardView
 import android.widget.TextView
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.view.MenuProvider
 import androidx.recyclerview.widget.RecyclerView
 import java.util.Objects.toString
@@ -33,6 +34,7 @@ class FirstFragment : Fragment() {
 
     private lateinit var trackingAdapter: TrackingAdapter
 
+    private lateinit var apiKey: String
 
     private val binding get() = _binding!!
 
@@ -48,6 +50,23 @@ class FirstFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        lifecycleScope.launch {
+            apiKey = RetrofitClient.getApiKey(requireContext())
+            if (apiKey.isEmpty() || apiKey == "null") {
+
+                findNavController().navigate(R.id.action_FirstFragment_to_Settings)
+                Snackbar.make(
+                    binding.root,
+                    "No API key configured. Please set your API key in settings.",
+                    Snackbar.LENGTH_LONG
+                ).show()
+
+                return@launch
+            }
+
+        }
+
 
         database = TrackingDatabase.getDatabase(requireContext())
         trackingsDao = database.trackingsDao()
@@ -176,12 +195,26 @@ class FirstFragment : Fragment() {
     private fun updateTrackings() {
         lifecycleScope.launch {
             try {
+                if (!::apiKey.isInitialized) {
+                    apiKey = RetrofitClient.getApiKey(requireContext())
+                }
+                if (apiKey.isEmpty()) {
+                    Snackbar.make(
+                        binding.root,
+                        "No API key configured. Please set your API key in settings.",
+                        Snackbar.LENGTH_LONG
+                    ).show()
+//                    findNavController().navigate(R.id.action_FirstFragment_to_Settings)
+                    return@launch
+                }
+
                 val trackings = trackingsDao.getAllTrackings()
                 for (tracking in trackings) {
                     if ((tracking.lastUpdated == null || (tracking.lastUpdated < System.currentTimeMillis() - 5 * 60 * 1000L)) && tracking.status != "delivered") {
+
                         val response = RetrofitClient.instance.track(
                             trackingNumber = tracking.trackingNumber,
-                            apiKey = "Bearer ${dotenv["API_KEY"]}",
+                            apiKey = "Bearer $apiKey",
                         )
                         if (response.isSuccessful) {
                             val status = response.body()
@@ -200,18 +233,27 @@ class FirstFragment : Fragment() {
                                 status = trackingData?.shipment?.statusMilestone ?: "Unknown",
                                 lastUpdated = System.currentTimeMillis()
                             )
-                        } else
-                            if (response.errorBody()?.string()
-                                    ?.contains("tracker_not_found") == true
+                        } else {
+                            val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                            if (errorBody.contains("tracker_not_found") == true
                             ) {
                                 println("Tracking number ${tracking.trackingNumber} not found, removing from database.")
                                 trackingsDao.deleteTrackingByTrackingNumber(tracking.trackingNumber)
                             } else
                                 println(
                                     "Failed to update status for ${tracking.trackingNumber}: ${
-                                        response.errorBody()?.string() ?: "Unknown error"
+                                        errorBody ?: "Unknown error"
                                     }"
                                 )
+                            if (errorBody.contains("auth_invalid_api_key") == true) {
+                                Snackbar.make(
+                                    binding.root,
+                                    "Invalid API key. Please check your settings.",
+                                    Snackbar.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+
                     } else {
                         println(
                             "Skipping update for ${tracking.trackingNumber}, last updated ${

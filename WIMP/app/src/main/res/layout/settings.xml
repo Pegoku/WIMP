@@ -29,7 +29,7 @@
             android:layout_marginTop="32dp"
             android:layout_marginEnd="8dp"
             android:hint="Ship24 Api key"
-            android:tooltipText= 'Tracking API  Webhook (Per-shipment plans)'
+            android:tooltipText='Tracking API  Webhook (Per-shipment plans)'
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/button_second">

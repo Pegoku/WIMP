@@ -6,6 +6,13 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
+
+    suspend fun getApiKey(context: android.content.Context): String {
+        val settingsDatabase = SettingsDatabase.getDatabase(context)
+        val settingsDao = settingsDatabase.settingsDao()
+        return settingsDao.getSettings()?.apiKey ?: ""
+    }
+
     //Retrofit client
     private val BASE_URL: String by lazy { dotenv["BASE_URL"] ?: "" }
 

@@ -275,7 +275,14 @@ class TrackingAdapter(
         holder.courierNameText.text = tracking.courierName
         holder.dateText.text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
             .format(Date(tracking.addedDate))
-        holder.statusText.text = tracking.status
+        holder.statusText.text =
+            when (tracking.status)
+            {
+                "pending" -> "Waiting for data"
+                "in_transit" -> "In transit"
+                "delivered" -> "Delivered"
+                else -> "Unknown status"
+            }
 
     }
 

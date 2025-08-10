@@ -49,13 +49,40 @@ class FirstFragment : Fragment() {
         trackingsDao = database.trackingsDao()
 
         setupRecyclerView()
-        loadTrackings()
         updateTrackings()
+        if (binding.bottomNavigation.selectedItemId == R.id.bottom_nav_all) {
+            loadTrackings()
+        }
         binding.buttonFirst.setOnClickListener {
             findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
         }
 
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.bottom_nav_all -> {
+                    loadTrackings()
+                    true
+                }
 
+                R.id.bottom_nav_waiting -> {
+                    loadTrackings("pending")
+                    true
+                }
+
+                R.id.bottom_nav_delivered -> {
+                    loadTrackings("delivered")
+                    true
+                }
+
+                R.id.bottom_nav_shipped -> {
+                    loadTrackings("in_transit")
+                    true
+                }
+
+                else -> false
+
+            }
+        }
     }
 
     private fun setupRecyclerView() {
@@ -78,11 +105,18 @@ class FirstFragment : Fragment() {
 //        }
     }
 
-    private fun loadTrackings() {
+    private fun loadTrackings(status: String? = null) {
         lifecycleScope.launch {
             if (_binding != null) {
                 try {
-                    val trackings = trackingsDao.getAllTrackings()
+                    val trackings: List<Tracking>
+
+                    if (status != null) {
+                        trackings = trackingsDao.getTrackingsByStatus(status)
+                    } else {
+                        trackings = trackingsDao.getAllTrackings()
+                    }
+
                     if (trackings.isEmpty()) {
                         binding.emptyListText.visibility = View.VISIBLE
                         binding.trackingListRecyclerview.visibility = View.GONE
@@ -119,7 +153,7 @@ class FirstFragment : Fragment() {
             try {
                 val trackings = trackingsDao.getAllTrackings()
                 for (tracking in trackings) {
-                    if (tracking.lastUpdated == null || (tracking.lastUpdated < System.currentTimeMillis() - 5 * 60 * 1000L)) {
+                    if ((tracking.lastUpdated == null || (tracking.lastUpdated < System.currentTimeMillis() - 5 * 60 * 1000L)) && tracking.status != "delivered") {
                         val response = RetrofitClient.instance.track(
                             trackingNumber = tracking.trackingNumber,
                             apiKey = "Bearer ${dotenv["API_KEY"]}",
@@ -157,13 +191,13 @@ class FirstFragment : Fragment() {
                         println(
                             "Skipping update for ${tracking.trackingNumber}, last updated ${
                                 abs(
-                                    tracking.lastUpdated - System.currentTimeMillis()
+                                    tracking.lastUpdated?.minus(System.currentTimeMillis()) ?: 0L
                                 ) / 1000
-                            }s ago."
+                            }s ago and ${tracking.status}."
                         )
                     }
                 }
-                loadTrackings() // Refresh the list after updating statuses
+//                loadTrackings() // Refresh the list after updating statuses
             } catch (e: Exception) {
                 Snackbar.make(
                     binding.root,

@@ -1,0 +1,26 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/bottom_nav_all"
+        android:enabled="true"
+        android:icon="@drawable/checkbox_multiple_blank_outline"
+        android:title="All" />
+
+    <item
+        android:id="@+id/bottom_nav_waiting"
+        android:enabled="true"
+        android:icon="@drawable/truck_alert_outline"
+        android:title="Waiting" />
+
+    <item
+        android:id="@+id/bottom_nav_shipped"
+        android:enabled="true"
+        android:icon="@drawable/baseline_local_shipping_24"
+        android:title="Shipped" />
+
+    <item
+        android:id="@+id/bottom_nav_delivered"
+        android:enabled="true"
+        android:icon="@drawable/package_variant_closed_check"
+        android:title="Delivered" />
+
+</menu>

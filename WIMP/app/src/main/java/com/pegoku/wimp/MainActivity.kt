@@ -99,6 +99,9 @@ interface TrackingsDao {
     @Query("SELECT events FROM trackings WHERE tracking_number = :trackingNumber")
     suspend fun getEventsByTrackingNumber(trackingNumber: String): String?
 
+    @Query("SELECT * FROM trackings WHERE status = :status ORDER BY added_date DESC")
+    suspend fun getTrackingsByStatus(status: String): List<Tracking>
+
 }
 
 @Database(

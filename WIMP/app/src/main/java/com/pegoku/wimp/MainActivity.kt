@@ -25,6 +25,7 @@ import com.pegoku.wimp.databinding.ActivityMainBinding
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
+
 @Entity(tableName = "trackings")
 data class Tracking(
     @PrimaryKey(autoGenerate = true)

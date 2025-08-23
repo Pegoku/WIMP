@@ -88,17 +88,23 @@ class FirstFragment : Fragment() {
                 }
 
                 R.id.bottom_nav_waiting -> {
-                    loadTrackings("pending")
+                    loadTrackings(
+                        listOf("pending", "exception", "failed_attempt")
+                    )
                     true
                 }
 
                 R.id.bottom_nav_delivered -> {
-                    loadTrackings("delivered")
+                    loadTrackings(
+                        listOf("delivered", "available_for_pickup")
+                    )
                     true
                 }
 
                 R.id.bottom_nav_shipped -> {
-                    loadTrackings("in_transit")
+                    loadTrackings(
+                        listOf("in_transit", "out_for_delivery", "info_received")
+                    )
                     true
                 }
 
@@ -149,16 +155,21 @@ class FirstFragment : Fragment() {
 //        }
     }
 
-    private fun loadTrackings(status: String? = null) {
+    private fun loadTrackings(status: List<String>? = null) {
         lifecycleScope.launch {
             if (_binding != null) {
                 try {
-                    val trackings: List<Tracking>
-
+                    var trackings: MutableList<Tracking> = mutableListOf()
+                    var listTrackings: List<Tracking>
                     if (status != null) {
-                        trackings = trackingsDao.getTrackingsByStatus(status)
+                        for (s in status) {
+                            listTrackings = trackingsDao.getTrackingsByStatus(s)
+                            for (t in listTrackings) {
+                                trackings.add(t)
+                            }
+                        }
                     } else {
-                        trackings = trackingsDao.getAllTrackings()
+                        trackings = trackingsDao.getAllTrackings().toMutableList()
                     }
 
                     if (trackings.isEmpty()) {
@@ -339,6 +350,11 @@ class TrackingAdapter(
                 "pending" -> "Waiting for data"
                 "in_transit" -> "In transit"
                 "delivered" -> "Delivered"
+                "available_for_pickup" -> "Available for pickup"
+                "exception" -> "Exception occurred"
+                "failed_attempt" -> "Failed delivery attempt"
+                "out_for_delivery" -> "Out for delivery"
+                "info_received" -> "Info received"
                 else -> "Unknown status"
             }
 

@@ -1,5 +1,12 @@
 package com.pegoku.wimp
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.Context.NOTIFICATION_SERVICE
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -18,14 +25,24 @@ import java.text.SimpleDateFormat
 import java.util.*
 import com.google.android.material.card.MaterialCardView
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.view.MenuProvider
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.location.Priority
 import java.util.Objects.toString
 import kotlin.math.abs
 import com.google.gson.Gson
+import kotlinx.coroutines.channels.Channel
 
 class FirstFragment : Fragment() {
+
+
 
     private var _binding: FragmentFirstBinding? = null
 
@@ -37,6 +54,22 @@ class FirstFragment : Fragment() {
     private lateinit var apiKey: String
 
     private val binding get() = _binding!!
+
+
+    companion object {
+        private const val CHANNEL_ID = "statusUpdates"
+        private const val NOTIFICATION_ID = 1
+    }
+
+    private val requestPostNotifications =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+            if (isGranted) {
+                println("Notification permission granted")
+                sendTestNotification()
+            } else {
+                println("Notification permission denied")
+            }
+        }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -50,6 +83,18 @@ class FirstFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Create the NotificationChannel.
+//        val name = "Status Updates"
+//        val descriptionText = "Notifications for tracking status updates"
+//        val importance = NotificationManager.IMPORTANCE_DEFAULT
+//        val CHANNEL_ID = "statusUpdates"
+//        val mChannel = NotificationChannel(CHANNEL_ID, name, importance)
+//        mChannel.description = descriptionText
+//        // Register the channel with the system. You can't change the importance
+//        // or other notification behaviors after this.
+//        val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+//        notificationManager.createNotificationChannel(mChannel)
 
         lifecycleScope.launch {
             apiKey = RetrofitClient.getApiKey(requireContext())
@@ -77,7 +122,11 @@ class FirstFragment : Fragment() {
 //            loadTrackings()
 //        }
         binding.buttonFirst.setOnClickListener {
-            findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
+            // Notification test
+            if(checkNotificationPermission()) {
+                sendTestNotification()
+            }
+//            findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
         }
 
         binding.bottomNavigation.setOnItemSelectedListener { item ->
@@ -279,13 +328,35 @@ class FirstFragment : Fragment() {
             } catch (e: Exception) {
                 Snackbar.make(
                     binding.root,
-                    "Error updating trackings: ${e.message}",
+                    "Error updating tracking: ${e.message}",
                     Snackbar.LENGTH_LONG
                 ).show()
-                println("Error updating trackings: ${e.message}")
+                println("Error updating tracking: ${e.message}")
             }
         }
 
+    }
+
+    private fun checkNotificationPermission(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+        val granted = ContextCompat.checkSelfPermission(
+            requireContext(), Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            requestPostNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        return granted
+    }
+
+    private fun sendTestNotification() {
+        val notification = NotificationCompat.Builder(requireContext(), CHANNEL_ID)
+            .setSmallIcon(R.drawable.package_variant_closed_check)
+            .setContentTitle("TestNotification")
+            .setContentText("Test Notification Content")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+
+        NotificationManagerCompat.from(requireContext()).notify(NOTIFICATION_ID, notification)
     }
 
     override fun onResume() {

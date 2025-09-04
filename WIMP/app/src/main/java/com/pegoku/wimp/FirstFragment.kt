@@ -59,6 +59,7 @@ class FirstFragment : Fragment() {
 
     private val binding get() = _binding!!
 
+    private var transitionStarted = false
 
     companion object {
         private const val CHANNEL_ID = "statusUpdates"
@@ -81,7 +82,7 @@ class FirstFragment : Fragment() {
         sharedElementReturnTransition = MaterialContainerTransform().apply {
             drawingViewId = R.id.nav_host_fragment_content_main
             scrimColor = Color.TRANSPARENT
-            duration = 3000
+            duration = 200
         }
 
 
@@ -138,11 +139,8 @@ class FirstFragment : Fragment() {
         trackingsDao = database.trackingsDao()
 
         setupRecyclerView()
-
+        loadTrackings()
         displayTrackings()
-
-        // Wait until the RecyclerView is laid out before starting the transition
-
 
         updateTrackings()
         displayTrackings()
@@ -245,42 +243,59 @@ class FirstFragment : Fragment() {
 
     private fun loadTrackings(status: List<String>? = null) {
         lifecycleScope.launch {
-            if (_binding != null) {
-                try {
-                    var trackings: MutableList<Tracking> = mutableListOf()
-                    var listTrackings: List<Tracking>
-                    if (status != null) {
-                        for (s in status) {
-                            listTrackings = trackingsDao.getTrackingsByStatus(s)
-                            for (t in listTrackings) {
-                                trackings.add(t)
-                            }
+            if (_binding == null) return@launch
+            try {
+                var trackings: MutableList<Tracking> = mutableListOf()
+                var listTrackings: List<Tracking>
+                if (status != null) {
+                    for (s in status) {
+                        listTrackings = trackingsDao.getTrackingsByStatus(s)
+                        for (t in listTrackings) {
+                            trackings.add(t)
                         }
-                    } else {
-                        trackings = trackingsDao.getAllTrackings().toMutableList()
                     }
-
-                    if (trackings.isEmpty()) {
-                        binding.emptyListText.visibility = View.VISIBLE
-                        binding.trackingListRecyclerview.visibility = View.GONE
-                    } else {
-                        binding.emptyListText.visibility = View.GONE
-                        binding.trackingListRecyclerview.visibility = View.VISIBLE
-                        trackingAdapter.updateList(trackings)
-                    }
-                } catch (e: Exception) {
-                    Snackbar.make(
-                        binding.root,
-                        "Error loading trackings: ${e.message}",
-                        Snackbar.LENGTH_LONG
-                    ).show()
-                    println("Error loading trackings: ${e.message}")
-
+                } else {
+                    trackings = trackingsDao.getAllTrackings().toMutableList()
                 }
+
+                if (trackings.isEmpty()) {
+                    binding.emptyListText.visibility = View.VISIBLE
+                    binding.trackingListRecyclerview.visibility = View.GONE
+                    maybeStartTransitionAfterListRender(hasData = false)
+                } else {
+                    binding.emptyListText.visibility = View.GONE
+                    binding.trackingListRecyclerview.visibility = View.VISIBLE
+                    trackingAdapter.updateList(trackings)
+                    maybeStartTransitionAfterListRender(hasData = true)
+                }
+            } catch (e: Exception) {
+                Snackbar.make(
+                    binding.root,
+                    "Error loading trackings: ${e.message}",
+                    Snackbar.LENGTH_LONG
+                ).show()
+                println("Error loading trackings: ${e.message}")
+
             }
-            startPostponedEnterTransition()
         }
 
+    }
+
+    private fun maybeStartTransitionAfterListRender(hasData: Boolean) {
+        if (transitionStarted || _binding == null || !isAdded) return
+
+        if (!hasData) {
+            transitionStarted = true
+            startPostponedEnterTransition()
+            return
+        }
+
+        binding.trackingListRecyclerview.doOnPreDraw {
+            if (!transitionStarted) {
+                transitionStarted = true
+                startPostponedEnterTransition()
+            }
+        }
     }
 
     private fun eventsToJson(events: List<TrackingEvent>?): String {
@@ -408,6 +423,7 @@ class FirstFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        transitionStarted = false
         _binding = null
     }
 

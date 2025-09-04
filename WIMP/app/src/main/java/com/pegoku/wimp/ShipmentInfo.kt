@@ -51,13 +51,13 @@ class ShipmentInfo : Fragment() {
         sharedElementEnterTransition = MaterialContainerTransform().apply {
             drawingViewId = R.id.nav_host_fragment_content_main
             scrimColor = Color.TRANSPARENT
-            duration = 5000
+            duration = 200
         }
 
         sharedElementReturnTransition = MaterialContainerTransform().apply {
             drawingViewId = R.id.nav_host_fragment_content_main
             scrimColor = Color.TRANSPARENT
-            duration = 5000
+            duration = 200
         }
 
         postponeEnterTransition()

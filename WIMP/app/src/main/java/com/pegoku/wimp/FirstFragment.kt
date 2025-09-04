@@ -16,6 +16,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
+import android.graphics.Color
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
@@ -34,8 +35,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.view.MenuProvider
 import androidx.core.view.doOnPreDraw
+import androidx.navigation.fragment.FragmentNavigatorExtras
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.location.Priority
+import com.google.android.material.transition.MaterialContainerTransform
 import com.google.android.material.transition.MaterialSharedAxis
 import java.util.Objects.toString
 import kotlin.math.abs
@@ -43,7 +46,6 @@ import com.google.gson.Gson
 import kotlinx.coroutines.channels.Channel
 
 class FirstFragment : Fragment() {
-
 
 
     private var _binding: FragmentFirstBinding? = null
@@ -76,10 +78,15 @@ class FirstFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        postponeEnterTransition()
+        sharedElementReturnTransition = MaterialContainerTransform().apply {
+            drawingViewId = R.id.nav_host_fragment_content_main
+            scrimColor = Color.TRANSPARENT
+            duration = 3000
+        }
 
-        exitTransition = MaterialSharedAxis(MaterialSharedAxis.X, true)
-        reenterTransition = MaterialSharedAxis(MaterialSharedAxis.X, false)
+
+//        exitTransition = MaterialSharedAxis(MaterialSharedAxis.X, true)
+//        reenterTransition = MaterialSharedAxis(MaterialSharedAxis.X, false)
 
     }
 
@@ -108,6 +115,8 @@ class FirstFragment : Fragment() {
 //        val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 //        notificationManager.createNotificationChannel(mChannel)
 
+        postponeEnterTransition()
+
         lifecycleScope.launch {
             apiKey = RetrofitClient.getApiKey(requireContext())
             if (apiKey.isEmpty() || apiKey == "null") {
@@ -133,10 +142,6 @@ class FirstFragment : Fragment() {
         displayTrackings()
 
         // Wait until the RecyclerView is laid out before starting the transition
-
-
-
-
 
 
         updateTrackings()
@@ -176,7 +181,7 @@ class FirstFragment : Fragment() {
 
     }
 
-    private fun displayTrackings(){
+    private fun displayTrackings() {
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.bottom_nav_all -> {
@@ -212,15 +217,22 @@ class FirstFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        trackingAdapter = TrackingAdapter(emptyList()) { tracking ->
-//            Snackbar.make(
-//                binding.root,
-//                "Selected: ${tracking.trackingNumber}",
-//                Snackbar.LENGTH_SHORT
-//            ).show()
-            findNavController().navigate(R.id.action_FirstFragment_to_ShipmentInfo, Bundle().apply {
+        trackingAdapter = TrackingAdapter(emptyList()) { sharedView: View, tracking: Tracking ->
+            val transitionName = "tracking_card_${tracking.trackingNumber}"
+            sharedView.transitionName = transitionName
+
+            val args = Bundle().apply {
                 putString("trackingCode", tracking.trackingNumber)
-            })
+                putString("sharedElementName", transitionName)
+            }
+            val extras = FragmentNavigatorExtras(sharedView to transitionName)
+
+            findNavController().navigate(
+                R.id.action_FirstFragment_to_ShipmentInfo,
+                args,
+                null,
+                extras
+            )
         }
 
         binding.trackingListRecyclerview.layoutManager = LinearLayoutManager(requireContext())
@@ -266,8 +278,7 @@ class FirstFragment : Fragment() {
 
                 }
             }
-                startPostponedEnterTransition()
-
+            startPostponedEnterTransition()
         }
 
     }
@@ -370,7 +381,8 @@ class FirstFragment : Fragment() {
     private fun checkNotificationPermission(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
         val granted = ContextCompat.checkSelfPermission(
-            requireContext(), Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            requireContext(), Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
         if (!granted) {
             requestPostNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -409,7 +421,7 @@ class FirstFragment : Fragment() {
 
 class TrackingAdapter(
     private var trackings: List<Tracking>,
-    private val onItemClick: (Tracking) -> Unit
+    private val onItemClick: (View, Tracking) -> Unit
 ) : RecyclerView.Adapter<TrackingAdapter.TrackingViewHolder>() {
 
     inner class TrackingViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -422,9 +434,9 @@ class TrackingAdapter(
 
         init {
             view.setOnClickListener {
-                val position = adapterPosition
+                val position = bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION) {
-                    onItemClick(trackings[position])
+                    onItemClick(cardView, trackings[position])
 //                    Snackbar.make(view, "Selected: ${trackings[position].trackingNumber}", Snackbar.LENGTH_SHORT).show()
                     println("Selected: ${trackings[position].trackingNumber}")
 //                    findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
@@ -458,6 +470,7 @@ class TrackingAdapter(
                 "info_received" -> "Info received"
                 else -> "Unknown status"
             }
+        holder.cardView.transitionName = "tracking_card_${tracking.trackingNumber}"
 
     }
 

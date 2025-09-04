@@ -11,16 +11,6 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
-        <Button
-            android:id="@+id/shipmentInfoBackButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Back"
-            android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.498"
-            app:layout_constraintStart_toStartOf="parent"
-            tools:layout_editor_absoluteY="16dp" />
 
         <TextView
             android:id="@+id/shipmentInfoNoAvailableText"
@@ -29,7 +19,6 @@
             android:layout_margin="8dp"
             android:text="No shipment information available.\nPlease check the tracking code and try again later."
             app:layout_constraintBottom_toTopOf="@+id/eventListRecyclerview"
-            app:layout_constraintTop_toBottomOf="@+id/shipmentInfoBackButton"
             app:layout_constraintVertical_bias="0.338"
             android:textStyle="bold"
             android:textSize="20dp"

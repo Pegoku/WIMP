@@ -1,5 +1,6 @@
 package com.pegoku.wimp
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -20,6 +21,7 @@ import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.core.view.doOnPreDraw
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.transition.MaterialContainerTransform
 import com.google.android.material.transition.MaterialSharedAxis
 import com.pegoku.wimp.databinding.ShipmentInfoBinding
 
@@ -29,8 +31,8 @@ class ShipmentInfo : Fragment() {
 
     private lateinit var database: TrackingDatabase
     private lateinit var trackingsDao: TrackingsDao
-
     private lateinit var shipmentEventAdapter: ShipmentEventAdapter
+
     private val binding get() = _binding!!
 
     override fun onCreateView(
@@ -46,14 +48,26 @@ class ShipmentInfo : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?){
         super.onCreate(savedInstanceState)
 
+        sharedElementEnterTransition = MaterialContainerTransform().apply {
+            drawingViewId = R.id.nav_host_fragment_content_main
+            scrimColor = Color.TRANSPARENT
+            duration = 5000
+        }
+
+        sharedElementReturnTransition = MaterialContainerTransform().apply {
+            drawingViewId = R.id.nav_host_fragment_content_main
+            scrimColor = Color.TRANSPARENT
+            duration = 5000
+        }
+
         postponeEnterTransition()
 
-        enterTransition = MaterialSharedAxis(MaterialSharedAxis.X, true)
-        returnTransition = MaterialSharedAxis(MaterialSharedAxis.X, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        binding.root.transitionName = arguments?.getString("sharedElementName")
 
         database = TrackingDatabase.getDatabase(requireContext())
         trackingsDao = database.trackingsDao()
@@ -63,10 +77,10 @@ class ShipmentInfo : Fragment() {
 
         println("TrackingCode: ${arguments?.getString("trackingCode")}")
 
-        binding.shipmentInfoBackButton.setOnClickListener {
-            findNavController().navigate(R.id.action_ShipmentInfo_to_FirstFragment)
-        }
+
         loadEvents(arguments?.getString("trackingCode") ?: "")
+
+
 
         requireActivity().addMenuProvider(object : MenuProvider {
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
@@ -109,7 +123,7 @@ class ShipmentInfo : Fragment() {
                                 "delivered"
                             )
                         }
-                        findNavController().navigate(R.id.action_ShipmentInfo_to_FirstFragment)
+                        findNavController().navigateUp()
                         true
                     }
 
@@ -122,7 +136,6 @@ class ShipmentInfo : Fragment() {
             startPostponedEnterTransition()
         }
     }
-
 
     private fun loadEvents(trackingCode: String) {
         lifecycleScope.launch {

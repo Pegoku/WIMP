@@ -33,8 +33,10 @@ import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.view.MenuProvider
+import androidx.core.view.doOnPreDraw
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.location.Priority
+import com.google.android.material.transition.MaterialSharedAxis
 import java.util.Objects.toString
 import kotlin.math.abs
 import com.google.gson.Gson
@@ -70,6 +72,16 @@ class FirstFragment : Fragment() {
                 println("Notification permission denied")
             }
         }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        postponeEnterTransition()
+
+        exitTransition = MaterialSharedAxis(MaterialSharedAxis.X, true)
+        reenterTransition = MaterialSharedAxis(MaterialSharedAxis.X, false)
+
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -117,18 +129,54 @@ class FirstFragment : Fragment() {
         trackingsDao = database.trackingsDao()
 
         setupRecyclerView()
+
+        displayTrackings()
+
+        // Wait until the RecyclerView is laid out before starting the transition
+
+
+
+
+
+
         updateTrackings()
+        displayTrackings()
+
 //        if (binding.bottomNavigation.selectedItemId == R.id.bottom_nav_all) {
 //            loadTrackings()
 //        }
         binding.buttonFirst.setOnClickListener {
             // Notification test
-            if(checkNotificationPermission()) {
-                sendTestNotification()
-            }
-//            findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
+//            if(checkNotificationPermission()) {
+//                sendTestNotification()
+//            }
+            findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
         }
 
+
+        requireActivity().addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.start_menu, menu)
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return when (menuItem.itemId) {
+                    R.id.action_settings -> {
+                        findNavController().navigate(
+                            R.id.action_FirstFragment_to_Settings,
+                        )
+                        true
+                    }
+
+                    else -> false
+                }
+            }
+        }, viewLifecycleOwner) // , Lifecycle.State.RESUMED)
+
+
+    }
+
+    private fun displayTrackings(){
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.bottom_nav_all -> {
@@ -161,36 +209,15 @@ class FirstFragment : Fragment() {
 
             }
         }
-
-        requireActivity().addMenuProvider(object : MenuProvider {
-            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                menuInflater.inflate(R.menu.start_menu, menu)
-            }
-
-            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
-                return when (menuItem.itemId) {
-                    R.id.action_settings -> {
-                        findNavController().navigate(
-                            R.id.action_FirstFragment_to_Settings,
-                        )
-                        true
-                    }
-
-                    else -> false
-                }
-            }
-        }, viewLifecycleOwner) // , Lifecycle.State.RESUMED)
-
-
     }
 
     private fun setupRecyclerView() {
         trackingAdapter = TrackingAdapter(emptyList()) { tracking ->
-            Snackbar.make(
-                binding.root,
-                "Selected: ${tracking.trackingNumber}",
-                Snackbar.LENGTH_SHORT
-            ).show()
+//            Snackbar.make(
+//                binding.root,
+//                "Selected: ${tracking.trackingNumber}",
+//                Snackbar.LENGTH_SHORT
+//            ).show()
             findNavController().navigate(R.id.action_FirstFragment_to_ShipmentInfo, Bundle().apply {
                 putString("trackingCode", tracking.trackingNumber)
             })
@@ -239,7 +266,10 @@ class FirstFragment : Fragment() {
 
                 }
             }
+                startPostponedEnterTransition()
+
         }
+
     }
 
     private fun eventsToJson(events: List<TrackingEvent>?): String {

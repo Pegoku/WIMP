@@ -294,6 +294,10 @@ class MainActivity : AppCompatActivity() {
             invalidateOptionsMenu()
         }
 
+//        supportFragmentManager
+//            .beginTransaction()
+//            .replace(R.id.action_FirstFragment_to_ShipmentInfo, FirstFragment())
+//            .commit()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

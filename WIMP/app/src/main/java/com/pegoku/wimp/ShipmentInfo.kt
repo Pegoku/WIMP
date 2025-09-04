@@ -18,7 +18,9 @@ import java.util.*
 import android.widget.TextView
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
+import androidx.core.view.doOnPreDraw
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.transition.MaterialSharedAxis
 import com.pegoku.wimp.databinding.ShipmentInfoBinding
 
 class ShipmentInfo : Fragment() {
@@ -39,6 +41,15 @@ class ShipmentInfo : Fragment() {
         _binding = ShipmentInfoBinding.inflate(inflater, container, false)
         return binding.root
 
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?){
+        super.onCreate(savedInstanceState)
+
+        postponeEnterTransition()
+
+        enterTransition = MaterialSharedAxis(MaterialSharedAxis.X, true)
+        returnTransition = MaterialSharedAxis(MaterialSharedAxis.X, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -107,6 +118,9 @@ class ShipmentInfo : Fragment() {
             }
         }, viewLifecycleOwner) // , Lifecycle.State.RESUMED)
 
+        binding.eventListRecyclerview.doOnPreDraw {
+            startPostponedEnterTransition()
+        }
     }
 
 
